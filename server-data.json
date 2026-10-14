@@ -1,0 +1,1048 @@
+{
+  "users": [
+    {
+      "id": "usr_passenger_1",
+      "name": "Priya Sharma",
+      "email": "passenger@rail.in",
+      "passwordHash": "pass123",
+      "phone": "+91 98765 43210",
+      "role": "PASSENGER",
+      "createdAt": "2026-01-10T10:00:00.000Z"
+    },
+    {
+      "id": "usr_admin_1",
+      "name": "Rajesh Kumar (Station Super)",
+      "email": "admin@rail.in",
+      "passwordHash": "admin123",
+      "phone": "+91 98111 22334",
+      "role": "ADMIN",
+      "createdAt": "2026-01-01T08:00:00.000Z"
+    },
+    {
+      "id": "usr_1791951109969_411",
+      "name": "Ananya Iyer",
+      "email": "ananya@test.com",
+      "passwordHash": "$2b$10$efh8Ttixq/2EHi/vytZrCOYlODs8NskHdgmxpdUuWkrHsiDR9l0hu",
+      "phone": "+91 94444 55555",
+      "role": "PASSENGER",
+      "createdAt": "2026-10-14T04:11:49.969Z"
+    },
+    {
+      "id": "usr_1791951567187_504",
+      "name": "Susithra S",
+      "email": "susithra@example.com",
+      "passwordHash": "$2b$10$DR8v9JBMRGuoxhiZ3rXHveCfhjxu019pPkReLMG5drkBTjvSkSRUi",
+      "phone": "+91 98450 11223",
+      "role": "PASSENGER",
+      "createdAt": "2026-10-14T04:19:27.187Z"
+    }
+  ],
+  "stations": [
+    {
+      "code": "MAS",
+      "name": "M.G.R. Chennai Central",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "zone": "Southern Railway",
+      "platforms": 12
+    },
+    {
+      "code": "NDLS",
+      "name": "New Delhi Railway Station",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "zone": "Northern Railway",
+      "platforms": 16
+    },
+    {
+      "code": "CSMT",
+      "name": "Chhatrapati Shivaji Maharaj Terminus",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "zone": "Central Railway",
+      "platforms": 18
+    },
+    {
+      "code": "SBC",
+      "name": "KSR Bengaluru City Junction",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "zone": "South Western Railway",
+      "platforms": 10
+    },
+    {
+      "code": "HWH",
+      "name": "Howrah Junction",
+      "city": "Kolkata",
+      "state": "West Bengal",
+      "zone": "Eastern Railway",
+      "platforms": 23
+    },
+    {
+      "code": "CBE",
+      "name": "Coimbatore Junction",
+      "city": "Coimbatore",
+      "state": "Tamil Nadu",
+      "zone": "Southern Railway",
+      "platforms": 6
+    },
+    {
+      "code": "MDU",
+      "name": "Madurai Junction",
+      "city": "Madurai",
+      "state": "Tamil Nadu",
+      "zone": "Southern Railway",
+      "platforms": 8
+    },
+    {
+      "code": "BZA",
+      "name": "Vijayawada Junction",
+      "city": "Vijayawada",
+      "state": "Andhra Pradesh",
+      "zone": "South Central Railway",
+      "platforms": 10
+    },
+    {
+      "code": "NGP",
+      "name": "Nagpur Junction",
+      "city": "Nagpur",
+      "state": "Maharashtra",
+      "zone": "Central Railway",
+      "platforms": 8
+    },
+    {
+      "code": "KPD",
+      "name": "Katpadi Junction",
+      "city": "Vellore",
+      "state": "Tamil Nadu",
+      "zone": "Southern Railway",
+      "platforms": 5
+    }
+  ],
+  "trains": [
+    {
+      "id": "tr_20607",
+      "trainNumber": "20607",
+      "trainName": "Vande Bharat Express",
+      "trainType": "VANDE_BHARAT",
+      "sourceCode": "MAS",
+      "sourceName": "M.G.R. Chennai Central",
+      "destinationCode": "SBC",
+      "destinationName": "KSR Bengaluru",
+      "departureTime": "05:50",
+      "arrivalTime": "10:20",
+      "duration": "4h 30m",
+      "distanceKm": 359,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.9,
+      "stops": [
+        {
+          "stationCode": "MAS",
+          "stationName": "Chennai Central",
+          "arrivalTime": "05:50",
+          "departureTime": "05:50",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 2
+        },
+        {
+          "stationCode": "KPD",
+          "stationName": "Katpadi Jn",
+          "arrivalTime": "07:13",
+          "departureTime": "07:15",
+          "haltMinutes": 2,
+          "distanceKm": 130,
+          "dayCount": 1,
+          "platform": 1
+        },
+        {
+          "stationCode": "SBC",
+          "stationName": "KSR Bengaluru",
+          "arrivalTime": "10:20",
+          "departureTime": "10:20",
+          "haltMinutes": 0,
+          "distanceKm": 359,
+          "dayCount": 1,
+          "platform": 7
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "CC",
+          "className": "AC Chair Car",
+          "baseMultiplier": 2.2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 120
+        },
+        {
+          "classCode": "1A",
+          "className": "Executive Chair (EC)",
+          "baseMultiplier": 4.1,
+          "reservationFee": 60,
+          "superfastSurcharge": 75,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 40
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "20607",
+        "status": "ON_TIME",
+        "delayMinutes": 0,
+        "currentStation": "MAS",
+        "nextStation": "KPD",
+        "currentPlatform": 2,
+        "lastUpdated": "2026-10-14T03:59:58.912Z",
+        "notes": "Departing on schedule from Platform 2"
+      }
+    },
+    {
+      "id": "tr_12622",
+      "trainNumber": "12622",
+      "trainName": "Tamil Nadu Superfast Express",
+      "trainType": "SUPERFAST",
+      "sourceCode": "NDLS",
+      "sourceName": "New Delhi",
+      "destinationCode": "MAS",
+      "destinationName": "M.G.R. Chennai Central",
+      "departureTime": "21:05",
+      "arrivalTime": "06:15",
+      "duration": "33h 10m",
+      "distanceKm": 2182,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.4,
+      "stops": [
+        {
+          "stationCode": "NDLS",
+          "stationName": "New Delhi",
+          "arrivalTime": "21:05",
+          "departureTime": "21:05",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 4
+        },
+        {
+          "stationCode": "NGP",
+          "stationName": "Nagpur Jn",
+          "arrivalTime": "13:05",
+          "departureTime": "13:10",
+          "haltMinutes": 5,
+          "distanceKm": 1092,
+          "dayCount": 2,
+          "platform": 2
+        },
+        {
+          "stationCode": "BZA",
+          "stationName": "Vijayawada Jn",
+          "arrivalTime": "23:15",
+          "departureTime": "23:25",
+          "haltMinutes": 10,
+          "distanceKm": 1751,
+          "dayCount": 2,
+          "platform": 6
+        },
+        {
+          "stationCode": "MAS",
+          "stationName": "Chennai Central",
+          "arrivalTime": "06:15",
+          "departureTime": "06:15",
+          "haltMinutes": 0,
+          "distanceKm": 2182,
+          "dayCount": 3,
+          "platform": 5
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "1A",
+          "className": "AC 1st Class",
+          "baseMultiplier": 4.2,
+          "reservationFee": 60,
+          "superfastSurcharge": 75,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 24
+        },
+        {
+          "classCode": "2A",
+          "className": "AC 2-Tier",
+          "baseMultiplier": 2.8,
+          "reservationFee": 50,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 48
+        },
+        {
+          "classCode": "3A",
+          "className": "AC 3-Tier",
+          "baseMultiplier": 2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 120
+        },
+        {
+          "classCode": "SL",
+          "className": "Sleeper Class",
+          "baseMultiplier": 1,
+          "reservationFee": 20,
+          "superfastSurcharge": 30,
+          "gstRate": 0,
+          "totalSeatsCapacity": 240
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "12622",
+        "status": "DELAYED",
+        "delayMinutes": 15,
+        "currentStation": "BZA",
+        "nextStation": "MAS",
+        "currentPlatform": 6,
+        "lastUpdated": "2026-10-14T03:59:58.912Z",
+        "notes": "Running 15 mins late due to route speed restriction"
+      }
+    },
+    {
+      "id": "tr_12621",
+      "trainNumber": "12621",
+      "trainName": "Tamil Nadu Superfast Express (MAS -> NDLS)",
+      "trainType": "SUPERFAST",
+      "sourceCode": "MAS",
+      "sourceName": "M.G.R. Chennai Central",
+      "destinationCode": "NDLS",
+      "destinationName": "New Delhi",
+      "departureTime": "22:00",
+      "arrivalTime": "07:40",
+      "duration": "33h 40m",
+      "distanceKm": 2182,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.5,
+      "stops": [
+        {
+          "stationCode": "MAS",
+          "stationName": "Chennai Central",
+          "arrivalTime": "22:00",
+          "departureTime": "22:00",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 3
+        },
+        {
+          "stationCode": "BZA",
+          "stationName": "Vijayawada Jn",
+          "arrivalTime": "04:15",
+          "departureTime": "04:25",
+          "haltMinutes": 10,
+          "distanceKm": 431,
+          "dayCount": 2,
+          "platform": 1
+        },
+        {
+          "stationCode": "NGP",
+          "stationName": "Nagpur Jn",
+          "arrivalTime": "14:40",
+          "departureTime": "14:45",
+          "haltMinutes": 5,
+          "distanceKm": 1090,
+          "dayCount": 2,
+          "platform": 1
+        },
+        {
+          "stationCode": "NDLS",
+          "stationName": "New Delhi",
+          "arrivalTime": "07:40",
+          "departureTime": "07:40",
+          "haltMinutes": 0,
+          "distanceKm": 2182,
+          "dayCount": 3,
+          "platform": 5
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "1A",
+          "className": "AC 1st Class",
+          "baseMultiplier": 4.2,
+          "reservationFee": 60,
+          "superfastSurcharge": 75,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 24
+        },
+        {
+          "classCode": "2A",
+          "className": "AC 2-Tier",
+          "baseMultiplier": 2.8,
+          "reservationFee": 50,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 48
+        },
+        {
+          "classCode": "3A",
+          "className": "AC 3-Tier",
+          "baseMultiplier": 2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 120
+        },
+        {
+          "classCode": "SL",
+          "className": "Sleeper Class",
+          "baseMultiplier": 1,
+          "reservationFee": 20,
+          "superfastSurcharge": 30,
+          "gstRate": 0,
+          "totalSeatsCapacity": 240
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "12621",
+        "status": "ON_TIME",
+        "delayMinutes": 0,
+        "currentStation": "MAS",
+        "nextStation": "BZA",
+        "currentPlatform": 3,
+        "lastUpdated": "2026-10-14T03:59:58.912Z",
+        "notes": "Scheduled departure on time from Platform 3"
+      }
+    },
+    {
+      "id": "tr_12675",
+      "trainNumber": "12675",
+      "trainName": "Kovai Superfast Express",
+      "trainType": "SUPERFAST",
+      "sourceCode": "MAS",
+      "sourceName": "M.G.R. Chennai Central",
+      "destinationCode": "CBE",
+      "destinationName": "Coimbatore Junction",
+      "departureTime": "06:10",
+      "arrivalTime": "14:05",
+      "duration": "7h 55m",
+      "distanceKm": 497,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.6,
+      "stops": [
+        {
+          "stationCode": "MAS",
+          "stationName": "Chennai Central",
+          "arrivalTime": "06:10",
+          "departureTime": "06:10",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 10
+        },
+        {
+          "stationCode": "KPD",
+          "stationName": "Katpadi Jn",
+          "arrivalTime": "07:48",
+          "departureTime": "07:50",
+          "haltMinutes": 2,
+          "distanceKm": 130,
+          "dayCount": 1,
+          "platform": 1
+        },
+        {
+          "stationCode": "CBE",
+          "stationName": "Coimbatore Jn",
+          "arrivalTime": "14:05",
+          "departureTime": "14:05",
+          "haltMinutes": 0,
+          "distanceKm": 497,
+          "dayCount": 1,
+          "platform": 2
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "CC",
+          "className": "AC Chair Car",
+          "baseMultiplier": 2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 96
+        },
+        {
+          "classCode": "2S",
+          "className": "Second Sitting",
+          "baseMultiplier": 0.7,
+          "reservationFee": 15,
+          "superfastSurcharge": 15,
+          "gstRate": 0,
+          "totalSeatsCapacity": 300
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "12675",
+        "status": "ON_TIME",
+        "delayMinutes": 0,
+        "currentStation": "KPD",
+        "nextStation": "CBE",
+        "currentPlatform": 1,
+        "lastUpdated": "2026-10-14T03:59:58.912Z",
+        "notes": "Departed Katpadi on schedule"
+      }
+    },
+    {
+      "id": "tr_12635",
+      "trainNumber": "12635",
+      "trainName": "Vaigai Superfast Express",
+      "trainType": "SUPERFAST",
+      "sourceCode": "MAS",
+      "sourceName": "M.G.R. Chennai Central",
+      "destinationCode": "MDU",
+      "destinationName": "Madurai Junction",
+      "departureTime": "13:50",
+      "arrivalTime": "21:30",
+      "duration": "7h 40m",
+      "distanceKm": 495,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.7,
+      "stops": [
+        {
+          "stationCode": "MAS",
+          "stationName": "Chennai Central",
+          "arrivalTime": "13:50",
+          "departureTime": "13:50",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 8
+        },
+        {
+          "stationCode": "MDU",
+          "stationName": "Madurai Jn",
+          "arrivalTime": "21:30",
+          "departureTime": "21:30",
+          "haltMinutes": 0,
+          "distanceKm": 495,
+          "dayCount": 1,
+          "platform": 1
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "CC",
+          "className": "AC Chair Car",
+          "baseMultiplier": 2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 80
+        },
+        {
+          "classCode": "2S",
+          "className": "Second Sitting",
+          "baseMultiplier": 0.7,
+          "reservationFee": 15,
+          "superfastSurcharge": 15,
+          "gstRate": 0,
+          "totalSeatsCapacity": 280
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "12635",
+        "status": "ON_TIME",
+        "delayMinutes": 0,
+        "currentStation": "MAS",
+        "nextStation": "MDU",
+        "currentPlatform": 8,
+        "lastUpdated": "2026-10-14T03:59:58.912Z"
+      }
+    },
+    {
+      "id": "tr_12164",
+      "trainNumber": "12164",
+      "trainName": "Chennai Superfast Express",
+      "trainType": "SUPERFAST",
+      "sourceCode": "CSMT",
+      "sourceName": "Mumbai CSMT",
+      "destinationCode": "MAS",
+      "destinationName": "M.G.R. Chennai Central",
+      "departureTime": "12:40",
+      "arrivalTime": "08:20",
+      "duration": "19h 40m",
+      "distanceKm": 1281,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.3,
+      "stops": [
+        {
+          "stationCode": "CSMT",
+          "stationName": "Mumbai CSMT",
+          "arrivalTime": "12:40",
+          "departureTime": "12:40",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 14
+        },
+        {
+          "stationCode": "MAS",
+          "stationName": "Chennai Central",
+          "arrivalTime": "08:20",
+          "departureTime": "08:20",
+          "haltMinutes": 0,
+          "distanceKm": 1281,
+          "dayCount": 2,
+          "platform": 7
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "2A",
+          "className": "AC 2-Tier",
+          "baseMultiplier": 2.8,
+          "reservationFee": 50,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 48
+        },
+        {
+          "classCode": "3A",
+          "className": "AC 3-Tier",
+          "baseMultiplier": 2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 120
+        },
+        {
+          "classCode": "SL",
+          "className": "Sleeper Class",
+          "baseMultiplier": 1,
+          "reservationFee": 20,
+          "superfastSurcharge": 30,
+          "gstRate": 0,
+          "totalSeatsCapacity": 220
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "12164",
+        "status": "ON_TIME",
+        "delayMinutes": 0,
+        "currentStation": "CSMT",
+        "nextStation": "MAS",
+        "currentPlatform": 14,
+        "lastUpdated": "2026-10-14T03:59:58.912Z"
+      }
+    },
+    {
+      "id": "tr_12951",
+      "trainNumber": "12951",
+      "trainName": "Mumbai Tejas Rajdhani Express",
+      "trainType": "RAJDHANI",
+      "sourceCode": "CSMT",
+      "sourceName": "Mumbai CSMT",
+      "destinationCode": "NDLS",
+      "destinationName": "New Delhi",
+      "departureTime": "17:00",
+      "arrivalTime": "08:32",
+      "duration": "15h 32m",
+      "distanceKm": 1384,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.8,
+      "stops": [
+        {
+          "stationCode": "CSMT",
+          "stationName": "Mumbai CSMT",
+          "arrivalTime": "17:00",
+          "departureTime": "17:00",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 16
+        },
+        {
+          "stationCode": "NDLS",
+          "stationName": "New Delhi",
+          "arrivalTime": "08:32",
+          "departureTime": "08:32",
+          "haltMinutes": 0,
+          "distanceKm": 1384,
+          "dayCount": 2,
+          "platform": 1
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "1A",
+          "className": "AC 1st Class",
+          "baseMultiplier": 4.4,
+          "reservationFee": 60,
+          "superfastSurcharge": 75,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 30
+        },
+        {
+          "classCode": "2A",
+          "className": "AC 2-Tier",
+          "baseMultiplier": 3,
+          "reservationFee": 50,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 60
+        },
+        {
+          "classCode": "3A",
+          "className": "AC 3-Tier",
+          "baseMultiplier": 2.2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 140
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "12951",
+        "status": "ON_TIME",
+        "delayMinutes": 0,
+        "currentStation": "CSMT",
+        "nextStation": "NDLS",
+        "currentPlatform": 16,
+        "lastUpdated": "2026-10-14T03:59:58.912Z"
+      }
+    },
+    {
+      "id": "tr_22691",
+      "trainNumber": "22691",
+      "trainName": "Bengaluru Rajdhani Express",
+      "trainType": "RAJDHANI",
+      "sourceCode": "SBC",
+      "sourceName": "KSR Bengaluru",
+      "destinationCode": "NDLS",
+      "destinationName": "New Delhi",
+      "departureTime": "20:00",
+      "arrivalTime": "05:30",
+      "duration": "33h 30m",
+      "distanceKm": 2367,
+      "runsOnDays": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "pantryAvailable": true,
+      "cleanlinessRating": 4.7,
+      "stops": [
+        {
+          "stationCode": "SBC",
+          "stationName": "KSR Bengaluru",
+          "arrivalTime": "20:00",
+          "departureTime": "20:00",
+          "haltMinutes": 0,
+          "distanceKm": 0,
+          "dayCount": 1,
+          "platform": 8
+        },
+        {
+          "stationCode": "NGP",
+          "stationName": "Nagpur Jn",
+          "arrivalTime": "15:20",
+          "departureTime": "15:25",
+          "haltMinutes": 5,
+          "distanceKm": 1275,
+          "dayCount": 2,
+          "platform": 1
+        },
+        {
+          "stationCode": "NDLS",
+          "stationName": "New Delhi",
+          "arrivalTime": "05:30",
+          "departureTime": "05:30",
+          "haltMinutes": 0,
+          "distanceKm": 2367,
+          "dayCount": 3,
+          "platform": 6
+        }
+      ],
+      "classes": [
+        {
+          "classCode": "1A",
+          "className": "AC 1st Class",
+          "baseMultiplier": 4.4,
+          "reservationFee": 60,
+          "superfastSurcharge": 75,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 24
+        },
+        {
+          "classCode": "2A",
+          "className": "AC 2-Tier",
+          "baseMultiplier": 3,
+          "reservationFee": 50,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 54
+        },
+        {
+          "classCode": "3A",
+          "className": "AC 3-Tier",
+          "baseMultiplier": 2.2,
+          "reservationFee": 40,
+          "superfastSurcharge": 45,
+          "gstRate": 0.05,
+          "totalSeatsCapacity": 130
+        }
+      ],
+      "liveStatus": {
+        "trainNumber": "22691",
+        "status": "ON_TIME",
+        "delayMinutes": 0,
+        "currentStation": "SBC",
+        "nextStation": "NGP",
+        "currentPlatform": 8,
+        "lastUpdated": "2026-10-14T03:59:58.912Z"
+      }
+    }
+  ],
+  "bookings": [
+    {
+      "id": "bk_1791951580493",
+      "pnr": "998-310-5283",
+      "userId": "usr_1791951567187_504",
+      "userEmail": "susithra@example.com",
+      "userName": "Susithra S",
+      "userPhone": "",
+      "trainNumber": "20607",
+      "trainName": "Vande Bharat Express",
+      "trainType": "VANDE_BHARAT",
+      "travelDate": "2026-10-16",
+      "sourceCode": "MAS",
+      "sourceName": "M.G.R. Chennai Central",
+      "destinationCode": "SBC",
+      "destinationName": "KSR Bengaluru City Junction",
+      "departureTime": "05:50",
+      "arrivalTime": "10:20",
+      "classCode": "CC",
+      "className": "AC Chair Car",
+      "departurePlatform": 2,
+      "passengers": [
+        {
+          "id": "pax_1791951580493_0",
+          "name": "Susithra S",
+          "age": 24,
+          "gender": "FEMALE",
+          "berthPreference": "WINDOW",
+          "coach": "C1",
+          "berthNumber": 53,
+          "berthType": "Window (WS)",
+          "status": "CONFIRMED"
+        }
+      ],
+      "fareBreakdown": {
+        "distanceKm": 359,
+        "classCode": "CC",
+        "className": "AC Chair Car",
+        "ratePerKm": 0.45,
+        "baseFare": 162,
+        "reservationCharge": 40,
+        "superfastCharge": 45,
+        "configuredChargesTotal": 85,
+        "subtotal": 247,
+        "gstRate": 0.05,
+        "gstAmount": 12,
+        "totalPerPassenger": 259,
+        "passengerCount": 1,
+        "grandTotal": 259
+      },
+      "status": "CANCELLED",
+      "bookedAt": "2026-10-14T04:19:40.493Z",
+      "cancelledAt": "2026-10-14T04:19:47.683Z",
+      "cancellationFee": 180,
+      "refundAmount": 79
+    },
+    {
+      "id": "bk_sample_01",
+      "pnr": "482-910-3847",
+      "userId": "usr_passenger_1",
+      "userEmail": "passenger@rail.in",
+      "userName": "Priya Sharma",
+      "trainNumber": "20607",
+      "trainName": "Vande Bharat Express",
+      "trainType": "VANDE_BHARAT",
+      "travelDate": "2026-10-16",
+      "sourceCode": "MAS",
+      "sourceName": "M.G.R. Chennai Central",
+      "destinationCode": "SBC",
+      "destinationName": "KSR Bengaluru",
+      "departureTime": "05:50",
+      "arrivalTime": "10:20",
+      "classCode": "CC",
+      "className": "AC Chair Car",
+      "departurePlatform": 2,
+      "passengers": [
+        {
+          "id": "pax_01",
+          "name": "Priya Sharma",
+          "age": 26,
+          "gender": "FEMALE",
+          "berthPreference": "WINDOW",
+          "coach": "C3",
+          "berthNumber": 18,
+          "berthType": "Window (WS)",
+          "status": "CONFIRMED"
+        },
+        {
+          "id": "pax_02",
+          "name": "Arjun Sharma",
+          "age": 29,
+          "gender": "MALE",
+          "berthPreference": "NO_PREFERENCE",
+          "coach": "C3",
+          "berthNumber": 19,
+          "berthType": "Aisle (AS)",
+          "status": "CONFIRMED"
+        }
+      ],
+      "fareBreakdown": {
+        "baseFare": 1580,
+        "reservationCharge": 80,
+        "superfastCharge": 90,
+        "gstAmount": 87,
+        "totalPerPassenger": 918.5,
+        "passengerCount": 2,
+        "grandTotal": 1837
+      },
+      "status": "CONFIRMED",
+      "bookedAt": "2026-10-13T03:59:58.912Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif_1791951587683",
+      "userId": "usr_1791951567187_504",
+      "trainNumber": "20607",
+      "title": "Ticket Cancelled: PNR 998-310-5283",
+      "message": "Your booking for Vande Bharat Express has been cancelled. Demo refund of ₹79 calculated.",
+      "type": "CANCELLATION",
+      "timestamp": "2026-10-14T04:19:47.683Z",
+      "read": false
+    },
+    {
+      "id": "notif_1791951580493",
+      "userId": "usr_1791951567187_504",
+      "trainNumber": "20607",
+      "title": "Booking Confirmed: PNR 998-310-5283",
+      "message": "Your booking for Vande Bharat Express on 2026-10-16 is confirmed in Coach C1.",
+      "type": "BOOKING",
+      "timestamp": "2026-10-14T04:19:40.493Z",
+      "read": false
+    },
+    {
+      "id": "notif_1791951567187",
+      "userId": "usr_1791951567187_504",
+      "title": "Welcome to RailSathi!",
+      "message": "Namaste Susithra S! Your passenger account has been registered. Search trains and book your journeys easily.",
+      "type": "REGISTRATION",
+      "timestamp": "2026-10-14T04:19:27.187Z",
+      "read": false
+    },
+    {
+      "id": "notif_1791951109969",
+      "userId": "usr_1791951109969_411",
+      "title": "Welcome to RailSathi!",
+      "message": "Namaste Ananya Iyer! Your passenger account has been registered. Search trains and book your journeys easily.",
+      "type": "REGISTRATION",
+      "timestamp": "2026-10-14T04:11:49.969Z",
+      "read": false
+    },
+    {
+      "id": "notif_01",
+      "userId": "usr_passenger_1",
+      "trainNumber": "20607",
+      "title": "Booking Confirmed: PNR 482-910-3847",
+      "message": "Your ticket for Vande Bharat Express (MAS → SBC) is confirmed in Coach C3.",
+      "type": "BOOKING",
+      "timestamp": "2026-10-13T03:59:58.912Z",
+      "read": false
+    },
+    {
+      "id": "notif_02",
+      "trainNumber": "20607",
+      "title": "Platform Assigned: Platform 2",
+      "message": "Train 20607 Vande Bharat Express will be positioned on Platform 2 at M.G.R. Chennai Central.",
+      "type": "PLATFORM_CHANGE",
+      "timestamp": "2026-10-13T23:59:58.912Z",
+      "read": false
+    },
+    {
+      "id": "notif_03",
+      "trainNumber": "12622",
+      "title": "Live Status Update: 12622 Tamil Nadu Express",
+      "message": "Running 15 mins behind schedule due to track maintenance near Vijayawada.",
+      "type": "DELAY",
+      "timestamp": "2026-10-14T02:59:58.912Z",
+      "read": false
+    }
+  ]
+}

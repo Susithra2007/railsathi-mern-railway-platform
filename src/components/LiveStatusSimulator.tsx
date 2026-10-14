@@ -21,6 +21,7 @@ export const LiveStatusSimulator: React.FC<LiveStatusSimulatorProps> = ({
   const [customNote, setCustomNote] = useState('Signal clearance delay near Katpadi junction');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +29,7 @@ export const LiveStatusSimulator: React.FC<LiveStatusSimulatorProps> = ({
 
     setLoading(true);
     setSuccessMsg(null);
+    setErrorMsg(null);
 
     try {
       const train = trains.find((t) => t.trainNumber === selectedTrain);
@@ -48,7 +50,7 @@ export const LiveStatusSimulator: React.FC<LiveStatusSimulatorProps> = ({
       onStatusBroadcasted();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
-      alert(err.message || 'Broadcast failed');
+      setErrorMsg(err.message || 'Broadcast failed');
     } finally {
       setLoading(false);
     }
@@ -76,6 +78,13 @@ export const LiveStatusSimulator: React.FC<LiveStatusSimulatorProps> = ({
         <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{successMsg}</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+          <span>{errorMsg}</span>
         </div>
       )}
 

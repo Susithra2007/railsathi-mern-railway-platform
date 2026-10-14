@@ -33,14 +33,42 @@ export const api = {
     return data;
   },
 
-  async register(name: string, email: string, password: string, phone: string): Promise<{ user: User; token: string }> {
+  async register(
+    name: string,
+    email: string,
+    password: string,
+    phone: string,
+    confirmPassword?: string
+  ): Promise<{ user: User; token: string }> {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, phone }),
+      body: JSON.stringify({ name, email, password, confirmPassword, phone }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Registration failed');
+    return data;
+  },
+
+  async forgotPassword(email: string, newPassword?: string): Promise<{ message: string }> {
+    const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Password reset failed');
+    return data;
+  },
+
+  async updateProfile(name: string, phone: string, user: User): Promise<{ user: User }> {
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      method: 'PUT',
+      headers: getHeaders(user.id, user.role),
+      body: JSON.stringify({ name, phone }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Profile update failed');
     return data;
   },
 
@@ -73,6 +101,20 @@ export const api = {
     return data.data;
   },
 
+  async getLiveTrainTracking(trainNumber: string): Promise<{ train: Train; liveStatus: TrainLiveStatus; stops: any[] }> {
+    const res = await fetch(`${API_BASE}/trains/tracking/${trainNumber}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to load live tracking data');
+    return data.data;
+  },
+
+  async advanceSimulationStep(trainNumber: string): Promise<TrainLiveStatus> {
+    const res = await fetch(`${API_BASE}/trains/simulate-step/${trainNumber}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to advance simulation');
+    return data.data;
+  },
+
   async getAlternativeRoutes(from: string, to: string, date: string, currentTrain?: string): Promise<{
     directAlternatives: AlternativeJourneyOption[];
     connectingAlternatives: AlternativeJourneyOption[];
@@ -91,6 +133,8 @@ export const api = {
       trainNumber: string;
       travelDate: string;
       classCode: SeatClassCode;
+      fromCode?: string;
+      toCode?: string;
       passengers: Array<{ name: string; age: number; gender: string; berthPreference: string }>;
     },
     user: User
@@ -103,6 +147,7 @@ export const api = {
         userId: user.id,
         userEmail: user.email,
         userName: user.name,
+        userPhone: user.phone,
       }),
     });
     const data = await res.json();
@@ -161,34 +206,21 @@ export const api = {
     return data.data;
   },
 
+  async getAllUsers(adminUser: User): Promise<User[]> {
+    const res = await fetch(`${API_BASE}/admin/users`, {
+      headers: getHeaders(adminUser.id, adminUser.role),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch users');
+    return data.data;
+  },
+
   async getSystemStats(user: User): Promise<any> {
     const res = await fetch(`${API_BASE}/admin/stats`, {
       headers: getHeaders(user.id, user.role),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to fetch stats');
-    return data.data;
-  },
-
-  async updateLiveStatus(
-    trainNumber: string,
-    statusData: {
-      status: string;
-      delayMinutes: number;
-      currentStation: string;
-      nextStation: string;
-      currentPlatform: number;
-      notes?: string;
-    },
-    adminUser: User
-  ): Promise<TrainLiveStatus> {
-    const res = await fetch(`${API_BASE}/admin/trains/${trainNumber}/live-status`, {
-      method: 'POST',
-      headers: getHeaders(adminUser.id, adminUser.role),
-      body: JSON.stringify({ ...statusData, role: adminUser.role }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to broadcast live status');
     return data.data;
   },
 
@@ -200,6 +232,50 @@ export const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to add train');
+    return data.data;
+  },
+
+  async toggleTrainStatus(trainNumber: string, adminUser: User): Promise<{ isActive: boolean }> {
+    const res = await fetch(`${API_BASE}/admin/trains/${trainNumber}/toggle`, {
+      method: 'POST',
+      headers: getHeaders(adminUser.id, adminUser.role),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to toggle train status');
+    return data;
+  },
+
+  async updateFareRules(params: any, adminUser: User): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/fare-rules`, {
+      method: 'POST',
+      headers: getHeaders(adminUser.id, adminUser.role),
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update fare rules');
+    return data;
+  },
+
+  async updateLiveStatus(
+    trainNumber: string,
+    statusData: {
+      status: string;
+      delayMinutes: number;
+      currentStation: string;
+      nextStation: string;
+      currentPlatform: number;
+      journeyProgress?: number;
+      notes?: string;
+    },
+    adminUser: User
+  ): Promise<TrainLiveStatus> {
+    const res = await fetch(`${API_BASE}/admin/trains/${trainNumber}/live-status`, {
+      method: 'POST',
+      headers: getHeaders(adminUser.id, adminUser.role),
+      body: JSON.stringify({ ...statusData, role: adminUser.role }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to broadcast live status');
     return data.data;
   },
 

@@ -7,6 +7,8 @@ export interface Station {
   state: string;
   zone: string;
   platforms: number;
+  lat: number;
+  lng: number;
 }
 
 export interface IntermediateStop {
@@ -18,11 +20,14 @@ export interface IntermediateStop {
   distanceKm: number;
   dayCount: number;
   platform: number;
+  lat?: number;
+  lng?: number;
 }
 
 export interface ClassFareRule {
   classCode: SeatClassCode;
   className: string;
+  perKmRate: number;
   baseMultiplier: number;
   reservationFee: number;
   superfastSurcharge: number;
@@ -35,10 +40,17 @@ export interface TrainLiveStatus {
   status: 'ON_TIME' | 'DELAYED' | 'DEPARTED' | 'ARRIVED';
   delayMinutes: number;
   currentStation: string;
+  previousStation: string;
   nextStation: string;
   currentPlatform: number;
+  journeyProgress: number; // 0-100
+  estimatedArrival: string;
+  estimatedDeparture: string;
+  dataSource: string;
   lastUpdated: string;
   notes?: string;
+  currentLat?: number;
+  currentLng?: number;
 }
 
 export interface Train {
@@ -59,6 +71,7 @@ export interface Train {
   classes: ClassFareRule[];
   pantryAvailable: boolean;
   cleanlinessRating: number;
+  isActive?: boolean;
   liveStatus?: TrainLiveStatus;
   classAvailabilities?: {
     classCode: SeatClassCode;
@@ -82,10 +95,18 @@ export interface Passenger {
 }
 
 export interface FareBreakdown {
+  distanceKm: number;
+  classCode: SeatClassCode;
+  className: string;
+  ratePerKm: number;
   baseFare: number;
   reservationCharge: number;
   superfastCharge: number;
+  configuredChargesTotal: number;
+  subtotal: number;
+  gstRate: number;
   gstAmount: number;
+  discountAmount?: number;
   totalPerPassenger: number;
   passengerCount: number;
   grandTotal: number;
@@ -97,6 +118,7 @@ export interface Booking {
   userId: string;
   userEmail: string;
   userName: string;
+  userPhone?: string;
   trainNumber: string;
   trainName: string;
   trainType: string;
@@ -136,7 +158,7 @@ export interface JourneyNotification {
   trainNumber?: string;
   title: string;
   message: string;
-  type: 'BOOKING' | 'DELAY' | 'PLATFORM_CHANGE' | 'REMINDER' | 'SIMULATION';
+  type: 'REGISTRATION' | 'BOOKING' | 'DELAY' | 'PLATFORM_CHANGE' | 'REMINDER' | 'CANCELLATION' | 'SIMULATION';
   timestamp: string;
   read: boolean;
 }

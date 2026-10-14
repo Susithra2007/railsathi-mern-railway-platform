@@ -18,21 +18,24 @@ import { ETicketModal } from './components/ETicketModal';
 import { StationScheduleModal } from './components/StationScheduleModal';
 import { GeminiAssistantModal } from './components/GeminiAssistantModal';
 import { NotificationDrawer } from './components/NotificationDrawer';
+import { AuthModal } from './components/AuthModal';
+import { WorkflowGuideModal } from './components/WorkflowGuideModal';
 
 import { HomePage } from './pages/HomePage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { LiveTrackingPage } from './pages/LiveTrackingPage';
 import { PNRStatusPage } from './pages/PNRStatusPage';
 import { MyBookingsPage } from './pages/MyBookingsPage';
 import { AdminPage } from './pages/AdminPage';
 
-import { AlertTriangle, CheckCircle2, Loader2, X } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
 
   // Navigation State
-  const [currentTab, setCurrentTab] = useState<'home' | 'search' | 'dashboard' | 'bookings' | 'pnr' | 'admin'>('home');
+  const [currentTab, setCurrentTab] = useState<'home' | 'search' | 'dashboard' | 'tracking' | 'bookings' | 'pnr' | 'admin'>('home');
 
   // Data State
   const [stations, setStations] = useState<Station[]>([]);
@@ -60,11 +63,15 @@ function AppContent() {
   } | undefined>(undefined);
 
   // Modals
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'LOGIN' | 'REGISTER' | 'FORGOT'>('LOGIN');
   const [selectedTrainForSchedule, setSelectedTrainForSchedule] = useState<Train | null>(null);
   const [bookingModalParams, setBookingModalParams] = useState<{
     train: Train;
     classCode: SeatClassCode;
     travelDate: string;
+    fromCode?: string;
+    toCode?: string;
   } | null>(null);
   const [eTicketBooking, setETicketBooking] = useState<Booking | null>(null);
   const [activeCancellationPnr, setActiveCancellationPnr] = useState<string | null>(null);
@@ -75,6 +82,8 @@ function AppContent() {
   } | null>(null);
   const [showAiModal, setShowAiModal] = useState(false);
   const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
+  const [showWorkflowGuide, setShowWorkflowGuide] = useState(false);
+  const [toastError, setToastError] = useState<string | null>(null);
   const [pnrTarget, setPnrTarget] = useState('482-910-3847');
 
   // Load initial dataset
@@ -94,6 +103,9 @@ function AppContent() {
         ]);
         setUserBookings(bookingsList);
         setNotifications(notifsList);
+      } else {
+        setUserBookings([]);
+        setNotifications([]);
       }
     } catch (err: any) {
       console.warn('Initial load error:', err.message);
@@ -106,7 +118,7 @@ function AppContent() {
     loadInitialData();
   }, [user]);
 
-  // Periodic polling for notifications (simulated real-time push)
+  // Periodic polling for notifications
   useEffect(() => {
     const interval = setInterval(async () => {
       if (user) {
@@ -129,7 +141,6 @@ function AppContent() {
       const results = await api.searchTrains(params);
       setSearchResults(results);
 
-      // Also fetch smart alternatives
       const altData = await api.getAlternativeRoutes(params.from, params.to, params.date);
       setAlternatives(altData);
     } catch (err: any) {
@@ -162,7 +173,7 @@ function AppContent() {
       const updatedBookings = await api.getUserBookings(user);
       setUserBookings(updatedBookings);
     } catch (err: any) {
-      alert(err.message || 'Cancellation failed');
+      setToastError(err.message || 'Cancellation failed');
       setActiveCancellationPnr(null);
     }
   };
@@ -170,8 +181,10 @@ function AppContent() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleMarkAllRead = async () => {
-    await api.markNotificationRead('all');
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
+    if (user) {
+      await api.markNotificationRead('all');
+      setNotifications(notifications.map((n) => ({ ...n, read: true })));
+    }
   };
 
   if (loading && stations.length === 0) {
@@ -185,7 +198,6 @@ function AppContent() {
     );
   }
 
-  // Find booking to cancel if modal is open
   const bookingToCancel = activeCancellationPnr
     ? userBookings.find((b) => b.pnr === activeCancellationPnr)
     : null;
@@ -198,6 +210,11 @@ function AppContent() {
         unreadCount={unreadCount}
         onOpenNotifications={() => setShowNotificationDrawer(true)}
         onOpenAiAssistant={() => setShowAiModal(true)}
+        onOpenAuthModal={(mode) => {
+          setAuthModalMode(mode || 'LOGIN');
+          setShowAuthModal(true);
+        }}
+        onOpenWorkflowGuide={() => setShowWorkflowGuide(true)}
       />
 
       <main className="flex-1">
@@ -207,6 +224,11 @@ function AppContent() {
             featuredTrains={trains}
             onSearch={handleSearch}
             onCheckPnr={handleCheckPnr}
+            onOpenAuthModal={(mode) => {
+              setAuthModalMode(mode || 'REGISTER');
+              setShowAuthModal(true);
+            }}
+            onOpenWorkflowGuide={() => setShowWorkflowGuide(true)}
             onExploreTrain={(t) => {
               setSearchParams({
                 from: t.sourceCode,
@@ -230,7 +252,13 @@ function AppContent() {
             searchParams={searchParams}
             onSearch={handleSearch}
             onBook={(train, classCode) =>
-              setBookingModalParams({ train, classCode, travelDate: searchParams.date })
+              setBookingModalParams({
+                train,
+                classCode,
+                travelDate: searchParams.date,
+                fromCode: searchParams.from,
+                toCode: searchParams.to,
+              })
             }
             onViewSchedule={(train) => setSelectedTrainForSchedule(train)}
             alternatives={alternatives}
@@ -245,6 +273,18 @@ function AppContent() {
             onOpenAiAssistant={() => setShowAiModal(true)}
             onNavigateToSearch={() => setCurrentTab('search')}
             onCheckPnr={handleCheckPnr}
+            onSearch={handleSearch}
+            onOpenAuthModal={() => {
+              setAuthModalMode('REGISTER');
+              setShowAuthModal(true);
+            }}
+          />
+        )}
+
+        {currentTab === 'tracking' && (
+          <LiveTrackingPage
+            trains={trains}
+            initialTrainNumber="20607"
           />
         )}
 
@@ -271,11 +311,32 @@ function AppContent() {
             stations={stations}
             onRefreshData={loadInitialData}
             onViewETicket={(b) => setETicketBooking(b)}
+            onOpenAuthModal={() => {
+              setAuthModalMode('LOGIN');
+              setShowAuthModal(true);
+            }}
           />
         )}
       </main>
 
       <Footer />
+
+      {/* Auth Modal (Login, Register, Forgot Password) */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authModalMode}
+      />
+
+      {/* System Architecture & Lifecycle Workflow Guide */}
+      <WorkflowGuideModal
+        isOpen={showWorkflowGuide}
+        onClose={() => setShowWorkflowGuide(false)}
+        onOpenAuth={(mode) => {
+          setAuthModalMode(mode || 'LOGIN');
+          setShowAuthModal(true);
+        }}
+      />
 
       {/* Booking Form Modal */}
       {bookingModalParams && (
@@ -283,8 +344,14 @@ function AppContent() {
           train={bookingModalParams.train}
           classCode={bookingModalParams.classCode}
           travelDate={bookingModalParams.travelDate}
+          fromCode={bookingModalParams.fromCode}
+          toCode={bookingModalParams.toCode}
           onClose={() => setBookingModalParams(null)}
           onSuccess={handleBookingSuccess}
+          onOpenAuthModal={() => {
+            setAuthModalMode('LOGIN');
+            setShowAuthModal(true);
+          }}
         />
       )}
 
@@ -402,7 +469,7 @@ function AppContent() {
                 <span className="font-mono text-slate-900">₹{cancellationResult.booking.fareBreakdown.grandTotal}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Clerkage & Cancellation Deductions:</span>
+                <span className="text-slate-500">Clerkage &amp; Cancellation Deductions:</span>
                 <span className="font-mono text-rose-700 font-bold">-₹{cancellationResult.cancellationFee}</span>
               </div>
               <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-sm text-slate-900">
@@ -412,7 +479,7 @@ function AppContent() {
             </div>
 
             <p className="text-[11px] text-slate-500">
-              Refund has been credited to your original payment mode (Demonstration).
+              Refund credited to original payment mode (Demonstration). General inventory updated.
             </p>
 
             <button
@@ -425,6 +492,22 @@ function AppContent() {
               Done
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastError && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm bg-rose-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-between gap-3 border border-rose-700 animate-slide-up">
+          <div className="flex items-center gap-2 text-xs font-semibold">
+            <AlertCircle className="w-4 h-4 text-rose-300 shrink-0" />
+            <span>{toastError}</span>
+          </div>
+          <button
+            onClick={() => setToastError(null)}
+            className="text-rose-300 hover:text-white text-xs font-bold px-1"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>

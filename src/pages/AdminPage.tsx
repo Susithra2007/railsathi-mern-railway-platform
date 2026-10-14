@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Booking, Station, Train } from '../types';
+import { Booking, Station, Train, User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { LiveStatusSimulator } from '../components/LiveStatusSimulator';
-import { ShieldCheck, Train as TrainIcon, Users, DollarSign, Plus, Search, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  ShieldCheck,
+  Train as TrainIcon,
+  Users,
+  Search,
+  AlertCircle,
+  AlertTriangle,
+  RefreshCw,
+  Power,
+  Settings,
+  Calculator,
+  CheckCircle2,
+} from 'lucide-react';
 
 interface AdminPageProps {
   trains: Train[];
   stations: Station[];
   onRefreshData: () => void;
   onViewETicket: (booking: Booking) => void;
+  onOpenAuthModal: () => void;
 }
 
 export const AdminPage: React.FC<AdminPageProps> = ({
@@ -17,20 +30,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   stations,
   onRefreshData,
   onViewETicket,
+  onOpenAuthModal,
 }) => {
-  const { user, isAdmin, switchRole } = useAuth();
+  const { user, isAdmin, login } = useAuth();
   const [stats, setStats] = useState<any>({
     totalTrains: 8,
     totalStations: 10,
     totalBookings: 1,
     confirmedCount: 1,
     cancelledCount: 0,
-    totalPassengers: 2,
+    totalPassengersRegistered: 2,
+    totalPassengersTraveled: 2,
     totalRevenue: 1837,
   });
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [searchFilter, setSearchFilter] = useState('');
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'TRAINS' | 'BOOKINGS' | 'SIMULATOR'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'TRAINS' | 'BOOKINGS' | 'USERS' | 'FARE_RULES'>('OVERVIEW');
   const [loading, setLoading] = useState(false);
 
   // New Train Form State
@@ -43,6 +59,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [newDuration, setNewDuration] = useState('7h 30m');
   const [newDistance, setNewDistance] = useState(495);
   const [formMsg, setFormMsg] = useState<string | null>(null);
+  const [adminError, setAdminError] = useState<string | null>(null);
+
+  // Fare Rule Form State
+  const [fareTrainNum, setFareTrainNum] = useState(trains[0]?.trainNumber || '20607');
+  const [fareClass, setFareClass] = useState('CC');
+  const [farePerKm, setFarePerKm] = useState('1.15');
+  const [fareResFee, setFareResFee] = useState('40');
+  const [fareSuperfast, setFareSuperfast] = useState('45');
+  const [fareMsg, setFareMsg] = useState<string | null>(null);
 
   const loadAdminData = async () => {
     if (!user || !isAdmin) return;
@@ -52,6 +77,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       setStats(statsData);
       const bookingsData = await api.getAllBookings(user);
       setAllBookings(bookingsData);
+      const usersData = await api.getAllUsers(user);
+      setAllUsers(usersData);
     } catch (err: any) {
       console.warn('Admin load error:', err.message);
     } finally {
@@ -64,6 +91,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       loadAdminData();
     }
   }, [isAdmin]);
+
+  const handleToggleTrain = async (trainNumber: string) => {
+    if (!user || !isAdmin) return;
+    try {
+      await api.toggleTrainStatus(trainNumber, user);
+      onRefreshData();
+      loadAdminData();
+    } catch (err: any) {
+      setAdminError(err.message || 'Toggle failed');
+    }
+  };
 
   const handleCreateTrain = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +126,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
         pantryAvailable: true,
         cleanlinessRating: 4.8,
+        isActive: true,
         stops: [
           {
             stationCode: newSource,
@@ -98,6 +137,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             distanceKm: 0,
             dayCount: 1,
             platform: 1,
+            lat: sourceStation?.lat,
+            lng: sourceStation?.lng,
           },
           {
             stationCode: newDest,
@@ -108,41 +149,96 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             distanceKm: Number(newDistance),
             dayCount: 1,
             platform: 2,
+            lat: destStation?.lat,
+            lng: destStation?.lng,
           },
         ],
         classes: [
-          { classCode: 'CC', className: 'AC Chair Car', baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 100 },
-          { classCode: '2S', className: 'Second Sitting', baseMultiplier: 0.7, reservationFee: 15, superfastSurcharge: 15, gstRate: 0.0, totalSeatsCapacity: 200 },
+          { classCode: 'CC', className: 'AC Chair Car', perKmRate: 1.15, baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 100 },
+          { classCode: '2S', className: 'Second Sitting', perKmRate: 0.30, baseMultiplier: 0.7, reservationFee: 15, superfastSurcharge: 15, gstRate: 0.0, totalSeatsCapacity: 200 },
         ],
-      } as any);
+      });
 
       setFormMsg(`Train #${newTrainNumber} (${newTrainName}) added successfully!`);
       setNewTrainNumber('');
       setNewTrainName('');
       onRefreshData();
+      loadAdminData();
       setTimeout(() => setFormMsg(null), 4000);
     } catch (err: any) {
-      alert(err.message || 'Failed to add train');
+      setFormMsg(err.message || 'Failed to add train');
     }
   };
 
+  const handleUpdateFareRules = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !isAdmin) return;
+    try {
+      await api.updateFareRules(
+        {
+          trainNumber: fareTrainNum,
+          classCode: fareClass,
+          perKmRate: parseFloat(farePerKm),
+          reservationFee: parseInt(fareResFee),
+          superfastSurcharge: parseInt(fareSuperfast),
+        },
+        user
+      );
+      setFareMsg(`Fare rules updated for ${fareClass} on Train #${fareTrainNum}!`);
+      onRefreshData();
+      setTimeout(() => setFareMsg(null), 4000);
+    } catch (err: any) {
+      setFareMsg(err.message || 'Failed to update fare rule');
+    }
+  };
+
+  const handleQuickAdminLogin = async () => {
+    try {
+      await login('admin@rail.in', 'admin123');
+    } catch (err: any) {
+      setAdminError(err.message || 'Admin login failed');
+    }
+  };
+
+  // Access control check
   if (!isAdmin) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-6">
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6">
         <div className="p-4 rounded-full bg-amber-50 text-amber-700 w-16 h-16 flex items-center justify-center mx-auto">
           <ShieldCheck className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-900">Administrator Clearance Required</h2>
+        <h2 className="text-2xl font-bold text-slate-900">Protected Administrator Portal</h2>
         <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-          The Admin Console is restricted to railway station superintendents and division managers. You are currently browsing as a passenger.
+          Access to fleet scheduling, booking audits, and fare rule configuration requires authenticated Administrator clearance. Users registered as Passengers cannot access this console.
         </p>
-        <button
-          onClick={() => switchRole('ADMIN')}
-          className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-2 shadow-sm"
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Switch to Admin Account (Rajesh Kumar)</span>
-        </button>
+
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 max-w-md mx-auto">
+          <p className="font-semibold text-slate-800">Demonstration Administrator Account:</p>
+          <p className="font-mono mt-1">admin@rail.in / admin123</p>
+        </div>
+
+        {adminError && (
+          <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs max-w-md mx-auto flex items-center justify-between">
+            <span>{adminError}</span>
+            <button onClick={() => setAdminError(null)} className="text-rose-600 font-bold ml-2">✕</button>
+          </div>
+        )}
+
+        <div className="flex justify-center gap-3">
+          <button
+            onClick={handleQuickAdminLogin}
+            className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-2 shadow-sm"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Sign In as Admin (Rajesh Kumar)</span>
+          </button>
+          <button
+            onClick={onOpenAuthModal}
+            className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg transition-colors"
+          >
+            Custom Sign In
+          </button>
+        </div>
       </div>
     );
   }
@@ -165,7 +261,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">Railway Fleet & Passenger Oversight</h1>
           <p className="text-slate-400 text-xs mt-1">
-            Logged in as {user?.name} · System Audit ID: #AD-MAS-01
+            Logged in as {user?.name} ({user?.email}) · System Clearance: SUPERINTENDENT
           </p>
         </div>
 
@@ -178,14 +274,36 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         </button>
       </div>
 
+      {adminError && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{adminError}</span>
+          </div>
+          <button onClick={() => setAdminError(null)} className="text-rose-600 hover:text-rose-900 font-bold ml-2">
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
-          <div className="text-xs font-semibold text-slate-500 uppercase">Active Fleet Trains</div>
+          <div className="text-xs font-semibold text-slate-500 uppercase">Operational Trains</div>
           <div className="text-2xl font-black text-slate-900 font-mono tabular-nums">
             {stats.totalTrains || trains.length}
           </div>
-          <div className="text-[11px] text-slate-500">Across 10 railway stations</div>
+          <div className="text-[11px] text-slate-500">Across {stats.totalStations || 10} major stations</div>
+        </div>
+
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+          <div className="text-xs font-semibold text-slate-500 uppercase">Registered Passengers</div>
+          <div className="text-2xl font-black text-slate-900 font-mono tabular-nums">
+            {stats.totalPassengersRegistered || allUsers.length}
+          </div>
+          <div className="text-[11px] text-emerald-700 font-semibold font-mono">
+            {stats.confirmedCount || 1} Active Bookings
+          </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
@@ -193,17 +311,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <div className="text-2xl font-black text-slate-900 font-mono tabular-nums">
             {stats.totalBookings || allBookings.length}
           </div>
-          <div className="text-[11px] text-emerald-700 font-semibold font-mono">
-            {stats.confirmedCount || 1} Confirmed
+          <div className="text-[11px] text-slate-500">
+            {stats.cancelledCount || 0} Cancelled
           </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
-          <div className="text-xs font-semibold text-slate-500 uppercase">Total Passengers</div>
-          <div className="text-2xl font-black text-slate-900 font-mono tabular-nums">
-            {stats.totalPassengers || 2}
-          </div>
-          <div className="text-[11px] text-slate-500">With verified coach/berths</div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
@@ -211,12 +321,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <div className="text-2xl font-black text-amber-900 font-mono tabular-nums">
             ₹{stats.totalRevenue || 1837}
           </div>
-          <div className="text-[11px] text-slate-500">Net of refunds</div>
+          <div className="text-[11px] text-slate-500">Net of cancellations</div>
         </div>
       </div>
 
       {/* Segmented Admin Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs font-semibold">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 text-xs font-semibold">
         <button
           onClick={() => setActiveTab('OVERVIEW')}
           className={`px-3.5 py-2 rounded-lg transition-colors ${
@@ -225,7 +335,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          System Overview & Simulator
+          Overview & Live Simulator
         </button>
         <button
           onClick={() => setActiveTab('BOOKINGS')}
@@ -235,7 +345,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
-          System Bookings Audit ({allBookings.length})
+          Bookings Audit ({allBookings.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('USERS')}
+          className={`px-3.5 py-2 rounded-lg transition-colors ${
+            activeTab === 'USERS'
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          Registered Passengers ({allUsers.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('FARE_RULES')}
+          className={`px-3.5 py-2 rounded-lg transition-colors ${
+            activeTab === 'FARE_RULES'
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          Configure Fare Rules
         </button>
         <button
           onClick={() => setActiveTab('TRAINS')}
@@ -263,24 +393,36 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           </div>
 
           <div className="lg:col-span-5 space-y-6">
-            {/* Quick Fleet Health */}
+            {/* Train Fleet Active / Inactive Status */}
             <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4 text-xs">
-              <h3 className="font-bold text-slate-900 text-sm">Station Hub Coverage</h3>
+              <h3 className="font-bold text-slate-900 text-sm">Train Fleet Status Management</h3>
               <div className="space-y-2">
-                {stations.slice(0, 6).map((s) => (
+                {trains.map((t) => (
                   <div
-                    key={s.code}
-                    className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100"
+                    key={t.trainNumber}
+                    className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100"
                   >
                     <div>
-                      <span className="font-bold text-slate-900">{s.city}</span>
-                      <span className="text-slate-500 font-mono text-[11px] ml-1.5">
-                        ({s.code})
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-slate-900">#{t.trainNumber}</span>
+                        <span className="font-semibold text-slate-800">{t.trainName}</span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 font-mono">
+                        {t.sourceCode} → {t.destinationCode} ({t.distanceKm} km)
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono text-slate-600 font-semibold">
-                      {s.platforms} Platforms
-                    </span>
+
+                    <button
+                      onClick={() => handleToggleTrain(t.trainNumber)}
+                      className={`px-2.5 py-1 rounded text-[11px] font-bold flex items-center gap-1 transition-colors ${
+                        t.isActive !== false
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                          : 'bg-rose-100 text-rose-800 hover:bg-rose-200'
+                      }`}
+                    >
+                      <Power className="w-3 h-3" />
+                      <span>{t.isActive !== false ? 'Active' : 'Inactive'}</span>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -314,9 +456,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 <tr>
                   <th className="py-2.5 px-3">PNR</th>
                   <th className="py-2.5 px-3">Passenger</th>
+                  <th className="py-2.5 px-3">Email</th>
                   <th className="py-2.5 px-3">Train</th>
                   <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Route</th>
                   <th className="py-2.5 px-3">Status</th>
                   <th className="py-2.5 px-3 font-mono">Fare</th>
                   <th className="py-2.5 px-3">Action</th>
@@ -329,13 +471,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     <td className="py-2.5 px-3 font-sans font-medium text-slate-900">
                       {b.userName}
                     </td>
+                    <td className="py-2.5 px-3 font-sans text-slate-500 truncate max-w-[140px]">
+                      {b.userEmail}
+                    </td>
                     <td className="py-2.5 px-3 font-sans">
                       {b.trainName} (#{b.trainNumber})
                     </td>
                     <td className="py-2.5 px-3 text-slate-600">{b.travelDate}</td>
-                    <td className="py-2.5 px-3 text-slate-600">
-                      {b.sourceCode} → {b.destinationCode}
-                    </td>
                     <td className="py-2.5 px-3">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-bold ${
@@ -363,6 +505,148 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Tab: Registered Passengers Audit */}
+      {activeTab === 'USERS' && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <h3 className="font-bold text-slate-900 text-sm">
+            Registered Passenger Accounts Audit
+          </h3>
+
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">#</th>
+                  <th className="py-2.5 px-3">Full Name</th>
+                  <th className="py-2.5 px-3">Email Address</th>
+                  <th className="py-2.5 px-3">Phone</th>
+                  <th className="py-2.5 px-3">Role</th>
+                  <th className="py-2.5 px-3">Registered At</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {allUsers.map((u, idx) => (
+                  <tr key={u.id} className="hover:bg-slate-50">
+                    <td className="py-2.5 px-3 text-slate-400 font-mono">{idx + 1}</td>
+                    <td className="py-2.5 px-3 font-semibold text-slate-900">{u.name}</td>
+                    <td className="py-2.5 px-3 font-mono text-slate-600">{u.email}</td>
+                    <td className="py-2.5 px-3 font-mono text-slate-600">{u.phone}</td>
+                    <td className="py-2.5 px-3 font-mono">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'ADMIN' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-slate-500 text-[11px]">
+                      {new Date(u.createdAt || Date.now()).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Configure Fare Rules */}
+      {activeTab === 'FARE_RULES' && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6 max-w-2xl">
+          <div>
+            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+              <Calculator className="w-4 h-4 text-amber-600" />
+              <span>Configure Distance-Based Fare Rules</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Adjust per-kilometre class multipliers, reservation fees, and superfast surcharges
+            </p>
+          </div>
+
+          {fareMsg && (
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>{fareMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateFareRules} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Train Schedule</label>
+                <select
+                  value={fareTrainNum}
+                  onChange={(e) => setFareTrainNum(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                >
+                  {trains.map((t) => (
+                    <option key={t.trainNumber} value={t.trainNumber}>
+                      #{t.trainNumber} - {t.trainName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Travel Class</label>
+                <select
+                  value={fareClass}
+                  onChange={(e) => setFareClass(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                >
+                  <option value="CC">AC Chair Car (CC)</option>
+                  <option value="1A">AC First Class (1A)</option>
+                  <option value="2A">AC 2-Tier (2A)</option>
+                  <option value="3A">AC 3-Tier (3A)</option>
+                  <option value="SL">Sleeper Class (SL)</option>
+                  <option value="2S">Second Sitting (2S)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Per-KM Rate (₹/km)</label>
+                <input
+                  type="number"
+                  step="0.05"
+                  value={farePerKm}
+                  onChange={(e) => setFarePerKm(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Reservation Fee (₹)</label>
+                <input
+                  type="number"
+                  value={fareResFee}
+                  onChange={(e) => setFareResFee(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Superfast Charge (₹)</label>
+                <input
+                  type="number"
+                  value={fareSuperfast}
+                  onChange={(e) => setFareSuperfast(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="py-2.5 px-6 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-lg transition-colors shadow-xs"
+            >
+              Update Class Fare Configuration
+            </button>
+          </form>
         </div>
       )}
 

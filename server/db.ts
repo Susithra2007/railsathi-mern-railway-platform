@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import bcrypt from 'bcryptjs';
 import {
   Booking,
   ClassFareRule,
@@ -13,7 +14,6 @@ import {
   User,
 } from './types';
 
-// In-memory state with persistence to local JSON file
 interface DatabaseSchema {
   users: User[];
   stations: Station[];
@@ -24,21 +24,21 @@ interface DatabaseSchema {
 
 const DB_FILE_PATH = path.resolve(process.cwd(), 'server-data.json');
 
-// Preloaded Stations
+// Real railway stations with real-world geographical coordinates for route mapping
 const SEED_STATIONS: Station[] = [
-  { code: 'MAS', name: 'M.G.R. Chennai Central', city: 'Chennai', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 12 },
-  { code: 'NDLS', name: 'New Delhi Railway Station', city: 'New Delhi', state: 'Delhi', zone: 'Northern Railway', platforms: 16 },
-  { code: 'CSMT', name: 'Chhatrapati Shivaji Maharaj Terminus', city: 'Mumbai', state: 'Maharashtra', zone: 'Central Railway', platforms: 18 },
-  { code: 'SBC', name: 'KSR Bengaluru City Junction', city: 'Bengaluru', state: 'Karnataka', zone: 'South Western Railway', platforms: 10 },
-  { code: 'HWH', name: 'Howrah Junction', city: 'Kolkata', state: 'West Bengal', zone: 'Eastern Railway', platforms: 23 },
-  { code: 'CBE', name: 'Coimbatore Junction', city: 'Coimbatore', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 6 },
-  { code: 'MDU', name: 'Madurai Junction', city: 'Madurai', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 8 },
-  { code: 'BZA', name: 'Vijayawada Junction', city: 'Vijayawada', state: 'Andhra Pradesh', zone: 'South Central Railway', platforms: 10 },
-  { code: 'NGP', name: 'Nagpur Junction', city: 'Nagpur', state: 'Maharashtra', zone: 'Central Railway', platforms: 8 },
-  { code: 'KPD', name: 'Katpadi Junction', city: 'Vellore', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 5 },
+  { code: 'MAS', name: 'M.G.R. Chennai Central', city: 'Chennai', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 12, lat: 13.0827, lng: 80.2755 },
+  { code: 'NDLS', name: 'New Delhi Railway Station', city: 'New Delhi', state: 'Delhi', zone: 'Northern Railway', platforms: 16, lat: 28.6429, lng: 77.2195 },
+  { code: 'CSMT', name: 'Chhatrapati Shivaji Maharaj Terminus', city: 'Mumbai', state: 'Maharashtra', zone: 'Central Railway', platforms: 18, lat: 18.9400, lng: 72.8354 },
+  { code: 'SBC', name: 'KSR Bengaluru City Junction', city: 'Bengaluru', state: 'Karnataka', zone: 'South Western Railway', platforms: 10, lat: 12.9779, lng: 77.5683 },
+  { code: 'HWH', name: 'Howrah Junction', city: 'Kolkata', state: 'West Bengal', zone: 'Eastern Railway', platforms: 23, lat: 22.5830, lng: 88.3426 },
+  { code: 'CBE', name: 'Coimbatore Junction', city: 'Coimbatore', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 6, lat: 11.0016, lng: 76.9665 },
+  { code: 'MDU', name: 'Madurai Junction', city: 'Madurai', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 8, lat: 9.9252, lng: 78.1198 },
+  { code: 'BZA', name: 'Vijayawada Junction', city: 'Vijayawada', state: 'Andhra Pradesh', zone: 'South Central Railway', platforms: 10, lat: 16.5186, lng: 80.6199 },
+  { code: 'NGP', name: 'Nagpur Junction', city: 'Nagpur', state: 'Maharashtra', zone: 'Central Railway', platforms: 8, lat: 21.1528, lng: 79.0882 },
+  { code: 'KPD', name: 'Katpadi Junction', city: 'Vellore', state: 'Tamil Nadu', zone: 'Southern Railway', platforms: 5, lat: 12.9698, lng: 79.1378 },
 ];
 
-// Preloaded Trains
+// Preloaded Trains with configured per-km fare rates and intermediate stops
 const SEED_TRAINS: Train[] = [
   {
     id: 'tr_20607',
@@ -56,24 +56,32 @@ const SEED_TRAINS: Train[] = [
     runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SUN'],
     pantryAvailable: true,
     cleanlinessRating: 4.9,
+    isActive: true,
     stops: [
-      { stationCode: 'MAS', stationName: 'Chennai Central', arrivalTime: '05:50', departureTime: '05:50', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 2 },
-      { stationCode: 'KPD', stationName: 'Katpadi Jn', arrivalTime: '07:13', departureTime: '07:15', haltMinutes: 2, distanceKm: 130, dayCount: 1, platform: 1 },
-      { stationCode: 'SBC', stationName: 'KSR Bengaluru', arrivalTime: '10:20', departureTime: '10:20', haltMinutes: 0, distanceKm: 359, dayCount: 1, platform: 7 },
+      { stationCode: 'MAS', stationName: 'M.G.R. Chennai Central', arrivalTime: '05:50', departureTime: '05:50', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 2, lat: 13.0827, lng: 80.2755 },
+      { stationCode: 'KPD', stationName: 'Katpadi Junction', arrivalTime: '07:13', departureTime: '07:15', haltMinutes: 2, distanceKm: 130, dayCount: 1, platform: 1, lat: 12.9698, lng: 79.1378 },
+      { stationCode: 'SBC', stationName: 'KSR Bengaluru City', arrivalTime: '10:20', departureTime: '10:20', haltMinutes: 0, distanceKm: 359, dayCount: 1, platform: 7, lat: 12.9779, lng: 77.5683 },
     ],
     classes: [
-      { classCode: 'CC', className: 'AC Chair Car', baseMultiplier: 2.2, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 120 },
-      { classCode: '1A', className: 'Executive Chair (EC)', baseMultiplier: 4.1, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 40 },
+      { classCode: 'CC', className: 'AC Chair Car', perKmRate: 1.15, baseMultiplier: 2.2, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 120 },
+      { classCode: '1A', className: 'Executive Chair Car (EC)', perKmRate: 2.65, baseMultiplier: 4.1, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 40 },
     ],
     liveStatus: {
       trainNumber: '20607',
       status: 'ON_TIME',
       delayMinutes: 0,
-      currentStation: 'MAS',
-      nextStation: 'KPD',
-      currentPlatform: 2,
+      currentStation: 'Katpadi Junction (KPD)',
+      previousStation: 'M.G.R. Chennai Central (MAS)',
+      nextStation: 'KSR Bengaluru City (SBC)',
+      currentPlatform: 1,
+      journeyProgress: 42,
+      estimatedArrival: '10:20',
+      estimatedDeparture: '05:50',
+      dataSource: 'SIMULATED_ACADEMIC_DEMO',
       lastUpdated: new Date().toISOString(),
-      notes: 'Departing on schedule from Platform 2',
+      notes: 'Departed Katpadi Junction right on time. Approaching Jolarpettai sector.',
+      currentLat: 12.9698,
+      currentLng: 79.1378,
     },
   },
   {
@@ -92,66 +100,35 @@ const SEED_TRAINS: Train[] = [
     runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
     pantryAvailable: true,
     cleanlinessRating: 4.4,
+    isActive: true,
     stops: [
-      { stationCode: 'NDLS', stationName: 'New Delhi', arrivalTime: '21:05', departureTime: '21:05', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 4 },
-      { stationCode: 'NGP', stationName: 'Nagpur Jn', arrivalTime: '13:05', departureTime: '13:10', haltMinutes: 5, distanceKm: 1092, dayCount: 2, platform: 2 },
-      { stationCode: 'BZA', stationName: 'Vijayawada Jn', arrivalTime: '23:15', departureTime: '23:25', haltMinutes: 10, distanceKm: 1751, dayCount: 2, platform: 6 },
-      { stationCode: 'MAS', stationName: 'Chennai Central', arrivalTime: '06:15', departureTime: '06:15', haltMinutes: 0, distanceKm: 2182, dayCount: 3, platform: 5 },
+      { stationCode: 'NDLS', stationName: 'New Delhi', arrivalTime: '21:05', departureTime: '21:05', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 4, lat: 28.6429, lng: 77.2195 },
+      { stationCode: 'NGP', stationName: 'Nagpur Junction', arrivalTime: '13:05', departureTime: '13:10', haltMinutes: 5, distanceKm: 1092, dayCount: 2, platform: 2, lat: 21.1528, lng: 79.0882 },
+      { stationCode: 'BZA', stationName: 'Vijayawada Junction', arrivalTime: '23:15', departureTime: '23:25', haltMinutes: 10, distanceKm: 1751, dayCount: 2, platform: 6, lat: 16.5186, lng: 80.6199 },
+      { stationCode: 'MAS', stationName: 'M.G.R. Chennai Central', arrivalTime: '06:15', departureTime: '06:15', haltMinutes: 0, distanceKm: 2182, dayCount: 3, platform: 5, lat: 13.0827, lng: 80.2755 },
     ],
     classes: [
-      { classCode: '1A', className: 'AC 1st Class', baseMultiplier: 4.2, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 24 },
-      { classCode: '2A', className: 'AC 2-Tier', baseMultiplier: 2.8, reservationFee: 50, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 48 },
-      { classCode: '3A', className: 'AC 3-Tier', baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 120 },
-      { classCode: 'SL', className: 'Sleeper Class', baseMultiplier: 1.0, reservationFee: 20, superfastSurcharge: 30, gstRate: 0.0, totalSeatsCapacity: 240 },
+      { classCode: '1A', className: 'AC 1st Class', perKmRate: 2.65, baseMultiplier: 4.2, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 24 },
+      { classCode: '2A', className: 'AC 2-Tier', perKmRate: 1.85, baseMultiplier: 2.8, reservationFee: 50, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 48 },
+      { classCode: '3A', className: 'AC 3-Tier', perKmRate: 1.25, baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 120 },
+      { classCode: 'SL', className: 'Sleeper Class', perKmRate: 0.48, baseMultiplier: 1.0, reservationFee: 20, superfastSurcharge: 30, gstRate: 0.0, totalSeatsCapacity: 240 },
     ],
     liveStatus: {
       trainNumber: '12622',
       status: 'DELAYED',
-      delayMinutes: 15,
-      currentStation: 'BZA',
-      nextStation: 'MAS',
+      delayMinutes: 20,
+      currentStation: 'Vijayawada Junction (BZA)',
+      previousStation: 'Nagpur Junction (NGP)',
+      nextStation: 'M.G.R. Chennai Central (MAS)',
       currentPlatform: 6,
+      journeyProgress: 78,
+      estimatedArrival: '06:35',
+      estimatedDeparture: '21:05',
+      dataSource: 'SIMULATED_ACADEMIC_DEMO',
       lastUpdated: new Date().toISOString(),
-      notes: 'Running 15 mins late due to route speed restriction',
-    },
-  },
-  {
-    id: 'tr_12621',
-    trainNumber: '12621',
-    trainName: 'Tamil Nadu Superfast Express (MAS -> NDLS)',
-    trainType: 'SUPERFAST',
-    sourceCode: 'MAS',
-    sourceName: 'M.G.R. Chennai Central',
-    destinationCode: 'NDLS',
-    destinationName: 'New Delhi',
-    departureTime: '22:00',
-    arrivalTime: '07:40',
-    duration: '33h 40m',
-    distanceKm: 2182,
-    runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
-    pantryAvailable: true,
-    cleanlinessRating: 4.5,
-    stops: [
-      { stationCode: 'MAS', stationName: 'Chennai Central', arrivalTime: '22:00', departureTime: '22:00', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 3 },
-      { stationCode: 'BZA', stationName: 'Vijayawada Jn', arrivalTime: '04:15', departureTime: '04:25', haltMinutes: 10, distanceKm: 431, dayCount: 2, platform: 1 },
-      { stationCode: 'NGP', stationName: 'Nagpur Jn', arrivalTime: '14:40', departureTime: '14:45', haltMinutes: 5, distanceKm: 1090, dayCount: 2, platform: 1 },
-      { stationCode: 'NDLS', stationName: 'New Delhi', arrivalTime: '07:40', departureTime: '07:40', haltMinutes: 0, distanceKm: 2182, dayCount: 3, platform: 5 },
-    ],
-    classes: [
-      { classCode: '1A', className: 'AC 1st Class', baseMultiplier: 4.2, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 24 },
-      { classCode: '2A', className: 'AC 2-Tier', baseMultiplier: 2.8, reservationFee: 50, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 48 },
-      { classCode: '3A', className: 'AC 3-Tier', baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 120 },
-      { classCode: 'SL', className: 'Sleeper Class', baseMultiplier: 1.0, reservationFee: 20, superfastSurcharge: 30, gstRate: 0.0, totalSeatsCapacity: 240 },
-    ],
-    liveStatus: {
-      trainNumber: '12621',
-      status: 'ON_TIME',
-      delayMinutes: 0,
-      currentStation: 'MAS',
-      nextStation: 'BZA',
-      currentPlatform: 3,
-      lastUpdated: new Date().toISOString(),
-      notes: 'Scheduled departure on time from Platform 3',
+      notes: 'Speed restriction due to track maintenance near Krishna River bridge.',
+      currentLat: 16.5186,
+      currentLng: 80.6199,
     },
   },
   {
@@ -170,24 +147,32 @@ const SEED_TRAINS: Train[] = [
     runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
     pantryAvailable: true,
     cleanlinessRating: 4.6,
+    isActive: true,
     stops: [
-      { stationCode: 'MAS', stationName: 'Chennai Central', arrivalTime: '06:10', departureTime: '06:10', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 10 },
-      { stationCode: 'KPD', stationName: 'Katpadi Jn', arrivalTime: '07:48', departureTime: '07:50', haltMinutes: 2, distanceKm: 130, dayCount: 1, platform: 1 },
-      { stationCode: 'CBE', stationName: 'Coimbatore Jn', arrivalTime: '14:05', departureTime: '14:05', haltMinutes: 0, distanceKm: 497, dayCount: 1, platform: 2 },
+      { stationCode: 'MAS', stationName: 'M.G.R. Chennai Central', arrivalTime: '06:10', departureTime: '06:10', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 10, lat: 13.0827, lng: 80.2755 },
+      { stationCode: 'KPD', stationName: 'Katpadi Junction', arrivalTime: '07:48', departureTime: '07:50', haltMinutes: 2, distanceKm: 130, dayCount: 1, platform: 1, lat: 12.9698, lng: 79.1378 },
+      { stationCode: 'CBE', stationName: 'Coimbatore Junction', arrivalTime: '14:05', departureTime: '14:05', haltMinutes: 0, distanceKm: 497, dayCount: 1, platform: 2, lat: 11.0016, lng: 76.9665 },
     ],
     classes: [
-      { classCode: 'CC', className: 'AC Chair Car', baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 96 },
-      { classCode: '2S', className: 'Second Sitting', baseMultiplier: 0.7, reservationFee: 15, superfastSurcharge: 15, gstRate: 0.0, totalSeatsCapacity: 300 },
+      { classCode: 'CC', className: 'AC Chair Car', perKmRate: 1.15, baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 96 },
+      { classCode: '2S', className: 'Second Sitting (2S)', perKmRate: 0.30, baseMultiplier: 0.7, reservationFee: 15, superfastSurcharge: 15, gstRate: 0.0, totalSeatsCapacity: 300 },
     ],
     liveStatus: {
       trainNumber: '12675',
       status: 'ON_TIME',
       delayMinutes: 0,
-      currentStation: 'KPD',
-      nextStation: 'CBE',
+      currentStation: 'Katpadi Junction (KPD)',
+      previousStation: 'M.G.R. Chennai Central (MAS)',
+      nextStation: 'Coimbatore Junction (CBE)',
       currentPlatform: 1,
+      journeyProgress: 32,
+      estimatedArrival: '14:05',
+      estimatedDeparture: '06:10',
+      dataSource: 'SIMULATED_ACADEMIC_DEMO',
       lastUpdated: new Date().toISOString(),
-      notes: 'Departed Katpadi on schedule',
+      notes: 'Running on schedule with high punctuality.',
+      currentLat: 12.9698,
+      currentLng: 79.1378,
     },
   },
   {
@@ -206,57 +191,31 @@ const SEED_TRAINS: Train[] = [
     runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
     pantryAvailable: true,
     cleanlinessRating: 4.7,
+    isActive: true,
     stops: [
-      { stationCode: 'MAS', stationName: 'Chennai Central', arrivalTime: '13:50', departureTime: '13:50', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 8 },
-      { stationCode: 'MDU', stationName: 'Madurai Jn', arrivalTime: '21:30', departureTime: '21:30', haltMinutes: 0, distanceKm: 495, dayCount: 1, platform: 1 },
+      { stationCode: 'MAS', stationName: 'M.G.R. Chennai Central', arrivalTime: '13:50', departureTime: '13:50', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 8, lat: 13.0827, lng: 80.2755 },
+      { stationCode: 'MDU', stationName: 'Madurai Junction', arrivalTime: '21:30', departureTime: '21:30', haltMinutes: 0, distanceKm: 495, dayCount: 1, platform: 1, lat: 9.9252, lng: 78.1198 },
     ],
     classes: [
-      { classCode: 'CC', className: 'AC Chair Car', baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 80 },
-      { classCode: '2S', className: 'Second Sitting', baseMultiplier: 0.7, reservationFee: 15, superfastSurcharge: 15, gstRate: 0.0, totalSeatsCapacity: 280 },
+      { classCode: 'CC', className: 'AC Chair Car', perKmRate: 1.15, baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 80 },
+      { classCode: '2S', className: 'Second Sitting', perKmRate: 0.30, baseMultiplier: 0.7, reservationFee: 15, superfastSurcharge: 15, gstRate: 0.0, totalSeatsCapacity: 280 },
     ],
     liveStatus: {
       trainNumber: '12635',
       status: 'ON_TIME',
       delayMinutes: 0,
-      currentStation: 'MAS',
-      nextStation: 'MDU',
+      currentStation: 'M.G.R. Chennai Central (MAS)',
+      previousStation: 'M.G.R. Chennai Central (MAS)',
+      nextStation: 'Madurai Junction (MDU)',
       currentPlatform: 8,
+      journeyProgress: 5,
+      estimatedArrival: '21:30',
+      estimatedDeparture: '13:50',
+      dataSource: 'SIMULATED_ACADEMIC_DEMO',
       lastUpdated: new Date().toISOString(),
-    },
-  },
-  {
-    id: 'tr_12164',
-    trainNumber: '12164',
-    trainName: 'Chennai Superfast Express',
-    trainType: 'SUPERFAST',
-    sourceCode: 'CSMT',
-    sourceName: 'Mumbai CSMT',
-    destinationCode: 'MAS',
-    destinationName: 'M.G.R. Chennai Central',
-    departureTime: '12:40',
-    arrivalTime: '08:20',
-    duration: '19h 40m',
-    distanceKm: 1281,
-    runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
-    pantryAvailable: true,
-    cleanlinessRating: 4.3,
-    stops: [
-      { stationCode: 'CSMT', stationName: 'Mumbai CSMT', arrivalTime: '12:40', departureTime: '12:40', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 14 },
-      { stationCode: 'MAS', stationName: 'Chennai Central', arrivalTime: '08:20', departureTime: '08:20', haltMinutes: 0, distanceKm: 1281, dayCount: 2, platform: 7 },
-    ],
-    classes: [
-      { classCode: '2A', className: 'AC 2-Tier', baseMultiplier: 2.8, reservationFee: 50, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 48 },
-      { classCode: '3A', className: 'AC 3-Tier', baseMultiplier: 2.0, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 120 },
-      { classCode: 'SL', className: 'Sleeper Class', baseMultiplier: 1.0, reservationFee: 20, superfastSurcharge: 30, gstRate: 0.0, totalSeatsCapacity: 220 },
-    ],
-    liveStatus: {
-      trainNumber: '12164',
-      status: 'ON_TIME',
-      delayMinutes: 0,
-      currentStation: 'CSMT',
-      nextStation: 'MAS',
-      currentPlatform: 14,
-      lastUpdated: new Date().toISOString(),
+      notes: 'Scheduled boarding open at Platform 8.',
+      currentLat: 13.0827,
+      currentLng: 80.2755,
     },
   },
   {
@@ -275,98 +234,74 @@ const SEED_TRAINS: Train[] = [
     runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
     pantryAvailable: true,
     cleanlinessRating: 4.8,
+    isActive: true,
     stops: [
-      { stationCode: 'CSMT', stationName: 'Mumbai CSMT', arrivalTime: '17:00', departureTime: '17:00', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 16 },
-      { stationCode: 'NDLS', stationName: 'New Delhi', arrivalTime: '08:32', departureTime: '08:32', haltMinutes: 0, distanceKm: 1384, dayCount: 2, platform: 1 },
+      { stationCode: 'CSMT', stationName: 'Mumbai CSMT', arrivalTime: '17:00', departureTime: '17:00', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 16, lat: 18.9400, lng: 72.8354 },
+      { stationCode: 'NDLS', stationName: 'New Delhi', arrivalTime: '08:32', departureTime: '08:32', haltMinutes: 0, distanceKm: 1384, dayCount: 2, platform: 1, lat: 28.6429, lng: 77.2195 },
     ],
     classes: [
-      { classCode: '1A', className: 'AC 1st Class', baseMultiplier: 4.4, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 30 },
-      { classCode: '2A', className: 'AC 2-Tier', baseMultiplier: 3.0, reservationFee: 50, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 60 },
-      { classCode: '3A', className: 'AC 3-Tier', baseMultiplier: 2.2, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 140 },
+      { classCode: '1A', className: 'AC 1st Class', perKmRate: 2.65, baseMultiplier: 4.4, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 30 },
+      { classCode: '2A', className: 'AC 2-Tier', perKmRate: 1.85, baseMultiplier: 3.0, reservationFee: 50, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 60 },
+      { classCode: '3A', className: 'AC 3-Tier', perKmRate: 1.25, baseMultiplier: 2.2, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 140 },
     ],
     liveStatus: {
       trainNumber: '12951',
       status: 'ON_TIME',
       delayMinutes: 0,
-      currentStation: 'CSMT',
-      nextStation: 'NDLS',
-      currentPlatform: 16,
+      currentStation: 'Surat Division',
+      previousStation: 'Mumbai CSMT (CSMT)',
+      nextStation: 'New Delhi (NDLS)',
+      currentPlatform: 1,
+      journeyProgress: 28,
+      estimatedArrival: '08:32',
+      estimatedDeparture: '17:00',
+      dataSource: 'SIMULATED_ACADEMIC_DEMO',
       lastUpdated: new Date().toISOString(),
-    },
-  },
-  {
-    id: 'tr_22691',
-    trainNumber: '22691',
-    trainName: 'Bengaluru Rajdhani Express',
-    trainType: 'RAJDHANI',
-    sourceCode: 'SBC',
-    sourceName: 'KSR Bengaluru',
-    destinationCode: 'NDLS',
-    destinationName: 'New Delhi',
-    departureTime: '20:00',
-    arrivalTime: '05:30',
-    duration: '33h 30m',
-    distanceKm: 2367,
-    runsOnDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
-    pantryAvailable: true,
-    cleanlinessRating: 4.7,
-    stops: [
-      { stationCode: 'SBC', stationName: 'KSR Bengaluru', arrivalTime: '20:00', departureTime: '20:00', haltMinutes: 0, distanceKm: 0, dayCount: 1, platform: 8 },
-      { stationCode: 'NGP', stationName: 'Nagpur Jn', arrivalTime: '15:20', departureTime: '15:25', haltMinutes: 5, distanceKm: 1275, dayCount: 2, platform: 1 },
-      { stationCode: 'NDLS', stationName: 'New Delhi', arrivalTime: '05:30', departureTime: '05:30', haltMinutes: 0, distanceKm: 2367, dayCount: 3, platform: 6 },
-    ],
-    classes: [
-      { classCode: '1A', className: 'AC 1st Class', baseMultiplier: 4.4, reservationFee: 60, superfastSurcharge: 75, gstRate: 0.05, totalSeatsCapacity: 24 },
-      { classCode: '2A', className: 'AC 2-Tier', baseMultiplier: 3.0, reservationFee: 50, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 54 },
-      { classCode: '3A', className: 'AC 3-Tier', baseMultiplier: 2.2, reservationFee: 40, superfastSurcharge: 45, gstRate: 0.05, totalSeatsCapacity: 130 },
-    ],
-    liveStatus: {
-      trainNumber: '22691',
-      status: 'ON_TIME',
-      delayMinutes: 0,
-      currentStation: 'SBC',
-      nextStation: 'NGP',
-      currentPlatform: 8,
-      lastUpdated: new Date().toISOString(),
+      notes: 'Cruising at 130 km/h with Tejas Smart Coach telemetry active.',
+      currentLat: 21.1702,
+      currentLng: 72.8311,
     },
   },
 ];
 
-// Preloaded Users
+// Seed Users with BCrypt-hashed passwords for security
+// Plaintext passwords:
+// passenger@rail.in -> pass123
+// admin@rail.in -> admin123
 const SEED_USERS: User[] = [
   {
-    id: 'usr_passenger_1',
+    id: 'usr_passenger_demo',
     name: 'Priya Sharma',
     email: 'passenger@rail.in',
-    passwordHash: 'pass123', // Demo authentication
+    passwordHash: bcrypt.hashSync('pass123', 10),
     phone: '+91 98765 43210',
     role: 'PASSENGER',
     createdAt: '2026-01-10T10:00:00.000Z',
   },
   {
-    id: 'usr_admin_1',
+    id: 'usr_admin_demo',
     name: 'Rajesh Kumar (Station Super)',
     email: 'admin@rail.in',
-    passwordHash: 'admin123',
+    passwordHash: bcrypt.hashSync('admin123', 10),
     phone: '+91 98111 22334',
     role: 'ADMIN',
     createdAt: '2026-01-01T08:00:00.000Z',
   },
 ];
 
-// Calculate future date for sample booking
+// Tomorrow's sample date
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 2);
 const sampleTravelDate = tomorrow.toISOString().split('T')[0];
 
-// Preloaded Active Sample Booking
 const SEED_BOOKINGS: Booking[] = [
   {
     id: 'bk_sample_01',
     pnr: '482-910-3847',
-    userId: 'usr_passenger_1',
+    userId: 'usr_passenger_demo',
     userEmail: 'passenger@rail.in',
     userName: 'Priya Sharma',
+    userPhone: '+91 98765 43210',
     trainNumber: '20607',
     trainName: 'Vande Bharat Express',
     trainType: 'VANDE_BHARAT',
@@ -405,24 +340,30 @@ const SEED_BOOKINGS: Booking[] = [
       },
     ],
     fareBreakdown: {
-      baseFare: 1580,
-      reservationCharge: 80,
-      superfastCharge: 90,
-      gstAmount: 87,
-      totalPerPassenger: 918.5,
+      distanceKm: 359,
+      classCode: 'CC',
+      className: 'AC Chair Car',
+      ratePerKm: 1.15,
+      baseFare: 413, // 359 * 1.15 = ~413
+      reservationCharge: 40,
+      superfastCharge: 45,
+      configuredChargesTotal: 85,
+      subtotal: 498,
+      gstRate: 0.05,
+      gstAmount: 25,
+      totalPerPassenger: 523,
       passengerCount: 2,
-      grandTotal: 1837,
+      grandTotal: 1046,
     },
     status: 'CONFIRMED',
     bookedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
   },
 ];
 
-// Preloaded Journey Notifications
 const SEED_NOTIFICATIONS: JourneyNotification[] = [
   {
-    id: 'notif_01',
-    userId: 'usr_passenger_1',
+    id: 'notif_demo_01',
+    userId: 'usr_passenger_demo',
     trainNumber: '20607',
     title: 'Booking Confirmed: PNR 482-910-3847',
     message: 'Your ticket for Vande Bharat Express (MAS → SBC) is confirmed in Coach C3.',
@@ -431,21 +372,12 @@ const SEED_NOTIFICATIONS: JourneyNotification[] = [
     read: false,
   },
   {
-    id: 'notif_02',
+    id: 'notif_demo_02',
     trainNumber: '20607',
-    title: 'Platform Assigned: Platform 2',
-    message: 'Train 20607 Vande Bharat Express will be positioned on Platform 2 at M.G.R. Chennai Central.',
+    title: 'Platform Position Assigned',
+    message: 'Train 20607 will be received on Platform 2 at M.G.R. Chennai Central.',
     type: 'PLATFORM_CHANGE',
-    timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
-    read: false,
-  },
-  {
-    id: 'notif_03',
-    trainNumber: '12622',
-    title: 'Live Status Update: 12622 Tamil Nadu Express',
-    message: 'Running 15 mins behind schedule due to track maintenance near Vijayawada.',
-    type: 'DELAY',
-    timestamp: new Date(Date.now() - 3600000 * 1).toISOString(),
+    timestamp: new Date(Date.now() - 3600000 * 6).toISOString(),
     read: false,
   },
 ];
@@ -467,7 +399,7 @@ class MemoryDatabase {
         }
       }
     } catch {
-      // Ignore file reading errors, fallback to default seed
+      // Ignore
     }
 
     const defaultData: DatabaseSchema = {
@@ -489,89 +421,202 @@ class MemoryDatabase {
     }
   }
 
-  // Station operations
+  // --- USER AUTHENTICATION & MANAGEMENT ---
+  getUsers(): User[] {
+    return this.data.users;
+  }
+
+  getUserByEmail(email: string): User | undefined {
+    return this.data.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  }
+
+  getUserById(id: string): User | undefined {
+    return this.data.users.find((u) => u.id === id);
+  }
+
+  registerUser(params: { name: string; email: string; password: string; phone: string }): User {
+    const cleanEmail = params.email.trim().toLowerCase();
+    if (this.getUserByEmail(cleanEmail)) {
+      throw new Error(`An account with email '${cleanEmail}' is already registered. Please sign in instead.`);
+    }
+
+    if (!params.password || params.password.length < 6) {
+      throw new Error('Password must be at least 6 characters long.');
+    }
+
+    // Secure password hashing with bcryptjs
+    const passwordHash = bcrypt.hashSync(params.password, 10);
+
+    const newUser: User = {
+      id: `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      name: params.name.trim(),
+      email: cleanEmail,
+      passwordHash,
+      phone: params.phone.trim(),
+      role: 'PASSENGER', // Security: User cannot self-grant ADMIN role!
+      createdAt: new Date().toISOString(),
+    };
+
+    this.data.users.push(newUser);
+
+    // Add welcome notification for new passenger
+    this.addNotification({
+      id: `notif_${Date.now()}`,
+      userId: newUser.id,
+      title: 'Welcome to RailSathi!',
+      message: `Namaste ${newUser.name}! Your passenger account has been registered. Search trains and book your journeys easily.`,
+      type: 'REGISTRATION',
+      timestamp: new Date().toISOString(),
+      read: false,
+    });
+
+    this.persist();
+    return newUser;
+  }
+
+  validatePassword(email: string, passwordAttempt: string): User | null {
+    const user = this.getUserByEmail(email);
+    if (!user) return null;
+
+    // Check with bcrypt
+    const isValid = bcrypt.compareSync(passwordAttempt, user.passwordHash);
+    if (!isValid) return null;
+
+    return user;
+  }
+
+  resetPassword(email: string, newPass: string): boolean {
+    const user = this.getUserByEmail(email);
+    if (!user) return false;
+
+    user.passwordHash = bcrypt.hashSync(newPass, 10);
+    this.addNotification({
+      id: `notif_${Date.now()}`,
+      userId: user.id,
+      title: 'Password Updated',
+      message: 'Your account password has been reset successfully.',
+      type: 'REGISTRATION',
+      timestamp: new Date().toISOString(),
+      read: false,
+    });
+    this.persist();
+    return true;
+  }
+
+  updateUserProfile(userId: string, updates: { name?: string; phone?: string }): User | null {
+    const user = this.getUserById(userId);
+    if (!user) return null;
+    if (updates.name) user.name = updates.name.trim();
+    if (updates.phone) user.phone = updates.phone.trim();
+    this.persist();
+    return user;
+  }
+
+  // --- STATIONS & TRAINS ---
   getStations(): Station[] {
     return this.data.stations;
   }
 
   getStationByCode(code: string): Station | undefined {
-    return this.data.stations.find((s) => s.code.toUpperCase() === code.toUpperCase());
+    return this.data.stations.find((s) => s.code.toUpperCase() === code.trim().toUpperCase());
   }
 
-  // Train operations
   getTrains(): Train[] {
     return this.data.trains;
   }
 
   getTrainByNumber(trainNumber: string): Train | undefined {
-    return this.data.trains.find((t) => t.trainNumber === trainNumber);
+    return this.data.trains.find((t) => t.trainNumber === trainNumber.trim());
   }
 
   searchTrains(sourceCode: string, destinationCode: string): Train[] {
-    const src = sourceCode.toUpperCase();
-    const dest = destinationCode.toUpperCase();
+    const src = sourceCode.trim().toUpperCase();
+    const dest = destinationCode.trim().toUpperCase();
+
+    if (src === dest) {
+      throw new Error('Source and Destination stations cannot be the same.');
+    }
 
     return this.data.trains.filter((train) => {
-      // direct match
+      if (train.isActive === false) return false;
+
+      // direct origin-destination match
       if (train.sourceCode === src && train.destinationCode === dest) {
         return true;
       }
-      // check intermediate stops
+
+      // intermediate stops verification
       const srcIdx = train.stops.findIndex((s) => s.stationCode === src);
       const destIdx = train.stops.findIndex((s) => s.stationCode === dest);
       return srcIdx !== -1 && destIdx !== -1 && srcIdx < destIdx;
     });
   }
 
-  addTrain(train: Train): Train {
-    this.data.trains.push(train);
-    this.persist();
-    return train;
+  // Distance calculation between stations along train stops
+  calculateRouteDistance(train: Train, fromCode: string, toCode: string): number {
+    const src = fromCode.trim().toUpperCase();
+    const dest = toCode.trim().toUpperCase();
+
+    if (train.sourceCode === src && train.destinationCode === dest) {
+      return train.distanceKm;
+    }
+
+    const srcStop = train.stops.find((s) => s.stationCode === src);
+    const destStop = train.stops.find((s) => s.stationCode === dest);
+
+    if (srcStop && destStop && destStop.distanceKm >= srcStop.distanceKm) {
+      return destStop.distanceKm - srcStop.distanceKm;
+    }
+
+    return train.distanceKm;
   }
 
-  updateTrain(trainNumber: string, updates: Partial<Train>): Train | null {
-    const idx = this.data.trains.findIndex((t) => t.trainNumber === trainNumber);
-    if (idx === -1) return null;
-    this.data.trains[idx] = { ...this.data.trains[idx], ...updates };
-    this.persist();
-    return this.data.trains[idx];
-  }
+  // --- DISTANCE-BASED FARE CALCULATION ---
+  // Formula:
+  // Base Fare = Route Distance (km) × Class Rate per km
+  // Total Fare = (Base Fare + Configured Charges) × Passenger Count - Applicable Discounts
+  calculateFare(
+    train: Train,
+    classRule: ClassFareRule,
+    passengerCount: number,
+    fromCode?: string,
+    toCode?: string
+  ): FareBreakdown {
+    const distanceKm = fromCode && toCode
+      ? this.calculateRouteDistance(train, fromCode, toCode)
+      : train.distanceKm;
 
-  updateLiveStatus(trainNumber: string, statusUpdate: Partial<TrainLiveStatus>): TrainLiveStatus | null {
-    const train = this.getTrainByNumber(trainNumber);
-    if (!train) return null;
-    const currentStatus = train.liveStatus || {
-      trainNumber,
-      status: 'ON_TIME',
-      delayMinutes: 0,
-      currentStation: train.sourceCode,
-      nextStation: train.destinationCode,
-      currentPlatform: 1,
-      lastUpdated: new Date().toISOString(),
+    const ratePerKm = classRule.perKmRate || 0.45;
+    const baseFare = Math.round(distanceKm * ratePerKm);
+    const reservationCharge = classRule.reservationFee;
+    const superfastCharge = train.trainType === 'SUPERFAST' || train.trainType === 'VANDE_BHARAT' || train.trainType === 'RAJDHANI'
+      ? classRule.superfastSurcharge
+      : 0;
+    const configuredChargesTotal = reservationCharge + superfastCharge;
+    const subtotal = baseFare + configuredChargesTotal;
+    const gstRate = classRule.gstRate || 0;
+    const gstAmount = Math.round(subtotal * gstRate);
+    const totalPerPassenger = subtotal + gstAmount;
+
+    return {
+      distanceKm,
+      classCode: classRule.classCode,
+      className: classRule.className,
+      ratePerKm,
+      baseFare,
+      reservationCharge,
+      superfastCharge,
+      configuredChargesTotal,
+      subtotal,
+      gstRate,
+      gstAmount,
+      totalPerPassenger,
+      passengerCount,
+      grandTotal: totalPerPassenger * passengerCount,
     };
-
-    train.liveStatus = {
-      ...currentStatus,
-      ...statusUpdate,
-      lastUpdated: new Date().toISOString(),
-    };
-
-    // Also broadcast notification
-    this.addNotification({
-      id: 'notif_' + Date.now(),
-      trainNumber,
-      title: `Status: ${train.trainName} (${trainNumber})`,
-      message: statusUpdate.notes || `Train is currently ${train.liveStatus.status} (delay: ${train.liveStatus.delayMinutes} mins) at platform ${train.liveStatus.currentPlatform}`,
-      type: statusUpdate.status === 'DELAYED' ? 'DELAY' : 'SIMULATION',
-      timestamp: new Date().toISOString(),
-      read: false,
-    });
-
-    this.persist();
-    return train.liveStatus;
   }
 
-  // Seat Availability calculation
+  // --- SEAT AVAILABILITY ---
   getSeatAvailability(trainNumber: string, classCode: SeatClassCode, travelDate: string) {
     const train = this.getTrainByNumber(trainNumber);
     if (!train) return null;
@@ -598,7 +643,6 @@ class MemoryDatabase {
     } else if (availableSeats > 0) {
       statusString = `CURR_AVBL-${availableSeats}`;
     } else {
-      // RAC/WL simulation
       const racCount = 6;
       statusString = `RAC-${racCount}`;
     }
@@ -616,42 +660,7 @@ class MemoryDatabase {
     };
   }
 
-  // Transparent Fare Calculation
-  calculateFare(train: Train, classRule: ClassFareRule, passengerCount: number): FareBreakdown {
-    // Distance-based base fare rate: ~ ₹0.40 per km for base sleeper
-    const baseDistanceRate = Math.round(train.distanceKm * 0.42 * classRule.baseMultiplier);
-    const reservationCharge = classRule.reservationFee;
-    const superfastCharge = train.trainType === 'SUPERFAST' || train.trainType === 'VANDE_BHARAT' || train.trainType === 'RAJDHANI' ? classRule.superfastSurcharge : 0;
-    const taxableSubtotal = baseDistanceRate + reservationCharge + superfastCharge;
-    const gstAmount = Math.round(taxableSubtotal * classRule.gstRate);
-    const totalPerPassenger = taxableSubtotal + gstAmount;
-
-    return {
-      baseFare: baseDistanceRate,
-      reservationCharge,
-      superfastCharge,
-      gstAmount,
-      totalPerPassenger,
-      passengerCount,
-      grandTotal: totalPerPassenger * passengerCount,
-    };
-  }
-
-  // Booking operations
-  getBookings(): Booking[] {
-    return this.data.bookings;
-  }
-
-  getUserBookings(userId: string): Booking[] {
-    return this.data.bookings.filter((b) => b.userId === userId);
-  }
-
-  getBookingByPnr(pnr: string): Booking | undefined {
-    const cleanPnr = pnr.replace(/\D/g, '');
-    return this.data.bookings.find((b) => b.pnr.replace(/\D/g, '') === cleanPnr);
-  }
-
-  // Generate unique 10-digit PNR in format: 482-910-3847
+  // --- TICKET BOOKING & PNR ---
   private generateUniquePnr(): string {
     while (true) {
       const part1 = Math.floor(100 + Math.random() * 900);
@@ -664,8 +673,10 @@ class MemoryDatabase {
     }
   }
 
-  // Coach & Berth assignment helper
-  private allocateBerths(classCode: SeatClassCode, passengers: Array<{ name: string; age: number; gender: string; berthPreference: string }>): Passenger[] {
+  private allocateBerths(
+    classCode: SeatClassCode,
+    passengers: Array<{ name: string; age: number; gender: string; berthPreference: string }>
+  ): Passenger[] {
     const coachPrefixMap: Record<SeatClassCode, string> = {
       '1A': 'H',
       '2A': 'A',
@@ -676,7 +687,6 @@ class MemoryDatabase {
     };
     const coachNum = Math.floor(1 + Math.random() * 4);
     const coach = `${coachPrefixMap[classCode] || 'S'}${coachNum}`;
-
     const berthTypes = ['Lower (LB)', 'Middle (MB)', 'Upper (UB)', 'Side Lower (SL)', 'Side Upper (SU)', 'Window (WS)'];
 
     return passengers.map((p, idx) => {
@@ -704,26 +714,39 @@ class MemoryDatabase {
     userId: string;
     userEmail: string;
     userName: string;
+    userPhone?: string;
     trainNumber: string;
     travelDate: string;
     classCode: SeatClassCode;
+    fromCode?: string;
+    toCode?: string;
     passengers: Array<{ name: string; age: number; gender: string; berthPreference: string }>;
   }): Booking {
     const train = this.getTrainByNumber(params.trainNumber);
-    if (!train) throw new Error(`Train ${params.trainNumber} not found.`);
+    if (!train) throw new Error(`Train #${params.trainNumber} not found.`);
 
     const classRule = train.classes.find((c) => c.classCode === params.classCode);
-    if (!classRule) throw new Error(`Class ${params.classCode} not supported on this train.`);
+    if (!classRule) throw new Error(`Class ${params.classCode} not supported on train #${train.trainNumber}.`);
 
-    // Atomic availability validation
+    // Server-side seat validation
     const availability = this.getSeatAvailability(params.trainNumber, params.classCode, params.travelDate);
     if (!availability || availability.availableSeats < params.passengers.length) {
       throw new Error(`Insufficient seats available in ${classRule.className}. Available: ${availability?.availableSeats || 0}`);
     }
 
-    const fareBreakdown = this.calculateFare(train, classRule, params.passengers.length);
+    const fareBreakdown = this.calculateFare(
+      train,
+      classRule,
+      params.passengers.length,
+      params.fromCode,
+      params.toCode
+    );
+
     const allocatedPassengers = this.allocateBerths(params.classCode, params.passengers);
     const pnr = this.generateUniquePnr();
+
+    const fromStation = params.fromCode ? this.getStationByCode(params.fromCode) : null;
+    const toStation = params.toCode ? this.getStationByCode(params.toCode) : null;
 
     const booking: Booking = {
       id: `bk_${Date.now()}`,
@@ -731,14 +754,15 @@ class MemoryDatabase {
       userId: params.userId,
       userEmail: params.userEmail,
       userName: params.userName,
+      userPhone: params.userPhone,
       trainNumber: train.trainNumber,
       trainName: train.trainName,
       trainType: train.trainType,
       travelDate: params.travelDate,
-      sourceCode: train.sourceCode,
-      sourceName: train.sourceName,
-      destinationCode: train.destinationCode,
-      destinationName: train.destinationName,
+      sourceCode: fromStation?.code || train.sourceCode,
+      sourceName: fromStation?.name || train.sourceName,
+      destinationCode: toStation?.code || train.destinationCode,
+      destinationName: toStation?.name || train.destinationName,
       departureTime: train.departureTime,
       arrivalTime: train.arrivalTime,
       classCode: params.classCode,
@@ -752,13 +776,13 @@ class MemoryDatabase {
 
     this.data.bookings.unshift(booking);
 
-    // Add journey notification
+    // Add user-specific booking notification
     this.addNotification({
       id: `notif_${Date.now()}`,
       userId: params.userId,
       trainNumber: train.trainNumber,
       title: `Booking Confirmed: PNR ${pnr}`,
-      message: `Your journey on ${train.trainName} (${train.trainNumber}) for ${params.travelDate} has been confirmed. Coach: ${allocatedPassengers[0]?.coach}.`,
+      message: `Your booking for ${train.trainName} on ${params.travelDate} is confirmed in Coach ${allocatedPassengers[0]?.coach}.`,
       type: 'BOOKING',
       timestamp: new Date().toISOString(),
       read: false,
@@ -768,28 +792,39 @@ class MemoryDatabase {
     return booking;
   }
 
-  cancelBooking(pnr: string, userId: string, isAdmin = false): { booking: Booking; refundAmount: number; cancellationFee: number } {
-    const booking = this.getBookingByPnr(pnr);
-    if (!booking) throw new Error('Booking not found.');
+  // --- BOOKING MANAGEMENT & CANCELLATION ---
+  getBookings(): Booking[] {
+    return this.data.bookings;
+  }
 
-    if (!isAdmin && booking.userId !== userId) {
-      throw new Error('Unauthorized: You can only cancel your own bookings.');
+  getUserBookings(userId: string): Booking[] {
+    return this.data.bookings.filter((b) => b.userId === userId);
+  }
+
+  getBookingByPnr(pnr: string): Booking | undefined {
+    const cleanPnr = pnr.replace(/\D/g, '');
+    return this.data.bookings.find((b) => b.pnr.replace(/\D/g, '') === cleanPnr);
+  }
+
+  cancelBooking(pnr: string, requestingUserId: string, isAdmin = false): { booking: Booking; refundAmount: number; cancellationFee: number } {
+    const booking = this.getBookingByPnr(pnr);
+    if (!booking) throw new Error('Booking not found with the specified PNR.');
+
+    // Security check: Passenger can only cancel their own booking!
+    if (!isAdmin && booking.userId !== requestingUserId) {
+      throw new Error('Access denied: You are not authorized to cancel another passenger\'s booking.');
     }
 
     if (booking.status === 'CANCELLED') {
       throw new Error('This ticket has already been cancelled.');
     }
 
-    // IRCTC Refund Slab Rules:
-    // Determine hours before departure
+    // IRCTC Refund Slab Calculation
     const journeyDateTime = new Date(`${booking.travelDate}T${booking.departureTime}:00`);
     const now = new Date();
     const hoursRemaining = (journeyDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
     const totalFare = booking.fareBreakdown.grandTotal;
-    let cancellationFee = 0;
 
-    // Clerkage standard deductions per passenger
     const clerkageMap: Record<SeatClassCode, number> = {
       '1A': 240,
       '2A': 200,
@@ -800,17 +835,14 @@ class MemoryDatabase {
     };
     const baseClerkage = (clerkageMap[booking.classCode] || 120) * booking.passengers.length;
 
+    let cancellationFee = 0;
     if (hoursRemaining > 48) {
-      // More than 48 hours: Flat clerkage deduction
       cancellationFee = baseClerkage;
     } else if (hoursRemaining > 12) {
-      // 12 to 48 hours: 25% of fare, subject to min clerkage
       cancellationFee = Math.max(baseClerkage, Math.round(totalFare * 0.25));
     } else if (hoursRemaining > 4) {
-      // 4 to 12 hours: 50% of fare
       cancellationFee = Math.max(baseClerkage, Math.round(totalFare * 0.5));
     } else {
-      // Less than 4 hours (Chart prepared): 75% fee
       cancellationFee = Math.round(totalFare * 0.75);
     }
 
@@ -822,13 +854,14 @@ class MemoryDatabase {
     booking.cancellationFee = cancellationFee;
     booking.refundAmount = refundAmount;
 
+    // Send user notification
     this.addNotification({
       id: `notif_${Date.now()}`,
       userId: booking.userId,
       trainNumber: booking.trainNumber,
       title: `Ticket Cancelled: PNR ${booking.pnr}`,
-      message: `Your booking for ${booking.trainName} has been cancelled. Refund of ₹${refundAmount} initiated (Deduction: ₹${cancellationFee}).`,
-      type: 'BOOKING',
+      message: `Your booking for ${booking.trainName} has been cancelled. Demo refund of ₹${refundAmount} calculated.`,
+      type: 'CANCELLATION',
       timestamp: new Date().toISOString(),
       read: false,
     });
@@ -837,42 +870,103 @@ class MemoryDatabase {
     return { booking, refundAmount, cancellationFee };
   }
 
-  // Users
-  getUserByEmail(email: string): User | undefined {
-    return this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  }
+  // --- LIVE TRAIN TRACKING & SIMULATION ---
+  getLiveTrainStatus(trainNumber: string): TrainLiveStatus | null {
+    const train = this.getTrainByNumber(trainNumber);
+    if (!train) return null;
 
-  getUserById(id: string): User | undefined {
-    return this.data.users.find((u) => u.id === id);
-  }
-
-  registerUser(params: { name: string; email: string; password: string; phone: string }): User {
-    if (this.getUserByEmail(params.email)) {
-      throw new Error('An account with this email already exists.');
+    if (!train.liveStatus) {
+      train.liveStatus = {
+        trainNumber: train.trainNumber,
+        status: 'ON_TIME',
+        delayMinutes: 0,
+        currentStation: train.sourceName,
+        previousStation: train.sourceName,
+        nextStation: train.stops[1]?.stationName || train.destinationName,
+        currentPlatform: 1,
+        journeyProgress: 15,
+        estimatedArrival: train.arrivalTime,
+        estimatedDeparture: train.departureTime,
+        dataSource: 'SIMULATED_ACADEMIC_DEMO',
+        lastUpdated: new Date().toISOString(),
+        currentLat: train.stops[0]?.lat || 13.0827,
+        currentLng: train.stops[0]?.lng || 80.2755,
+      };
     }
-    const newUser: User = {
-      id: `usr_${Date.now()}`,
-      name: params.name,
-      email: params.email.toLowerCase(),
-      passwordHash: params.password, // demonstration store
-      phone: params.phone,
-      role: 'PASSENGER',
-      createdAt: new Date().toISOString(),
-    };
-    this.data.users.push(newUser);
-    this.persist();
-    return newUser;
+
+    return train.liveStatus;
   }
 
-  // Notifications
+  advanceLiveSimulation(trainNumber: string): TrainLiveStatus | null {
+    const train = this.getTrainByNumber(trainNumber);
+    if (!train) return null;
+
+    const currentStatus = this.getLiveTrainStatus(trainNumber);
+    if (!currentStatus) return null;
+
+    let newProgress = (currentStatus.journeyProgress + 15) % 100;
+    if (newProgress === 0) newProgress = 10;
+
+    // Calculate station progression
+    const stopCount = train.stops.length;
+    const currentStopIdx = Math.min(
+      stopCount - 1,
+      Math.floor((newProgress / 100) * stopCount)
+    );
+    const prevStop = train.stops[Math.max(0, currentStopIdx - 1)];
+    const curStop = train.stops[currentStopIdx];
+    const nxtStop = train.stops[Math.min(stopCount - 1, currentStopIdx + 1)];
+
+    train.liveStatus = {
+      ...currentStatus,
+      journeyProgress: newProgress,
+      currentStation: curStop.stationName,
+      previousStation: prevStop.stationName,
+      nextStation: nxtStop.stationName,
+      currentPlatform: curStop.platform || 1,
+      currentLat: curStop.lat || train.stops[0]?.lat,
+      currentLng: curStop.lng || train.stops[0]?.lng,
+      lastUpdated: new Date().toISOString(),
+      notes: `Advancing on route. Current position: ${curStop.stationName}.`,
+    };
+
+    this.persist();
+    return train.liveStatus;
+  }
+
+  updateLiveStatus(trainNumber: string, statusUpdate: Partial<TrainLiveStatus>): TrainLiveStatus | null {
+    const train = this.getTrainByNumber(trainNumber);
+    if (!train) return null;
+
+    train.liveStatus = {
+      ...(train.liveStatus || this.getLiveTrainStatus(trainNumber)!),
+      ...statusUpdate,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    this.addNotification({
+      id: `notif_${Date.now()}`,
+      trainNumber,
+      title: `Live Status: ${train.trainName} (#${trainNumber})`,
+      message: statusUpdate.notes || `Train is currently ${train.liveStatus.status} (delay: ${train.liveStatus.delayMinutes} mins) at platform ${train.liveStatus.currentPlatform}`,
+      type: statusUpdate.status === 'DELAYED' ? 'DELAY' : 'SIMULATION',
+      timestamp: new Date().toISOString(),
+      read: false,
+    });
+
+    this.persist();
+    return train.liveStatus;
+  }
+
+  // --- NOTIFICATIONS ---
   getNotifications(userId?: string): JourneyNotification[] {
     return this.data.notifications.filter((n) => !n.userId || (userId && n.userId === userId));
   }
 
   addNotification(notification: JourneyNotification): JourneyNotification {
     this.data.notifications.unshift(notification);
-    if (this.data.notifications.length > 50) {
-      this.data.notifications = this.data.notifications.slice(0, 50);
+    if (this.data.notifications.length > 60) {
+      this.data.notifications = this.data.notifications.slice(0, 60);
     }
     this.persist();
     return notification;
@@ -895,12 +989,34 @@ class MemoryDatabase {
     this.persist();
   }
 
-  // Alternative Journey Explorer Engine
+  // --- ADMIN MANAGEMENT ---
+  addTrain(train: Train): Train {
+    this.data.trains.push(train);
+    this.persist();
+    return train;
+  }
+
+  updateTrain(trainNumber: string, updates: Partial<Train>): Train | null {
+    const idx = this.data.trains.findIndex((t) => t.trainNumber === trainNumber);
+    if (idx === -1) return null;
+    this.data.trains[idx] = { ...this.data.trains[idx], ...updates };
+    this.persist();
+    return this.data.trains[idx];
+  }
+
+  toggleTrainActive(trainNumber: string): boolean {
+    const train = this.getTrainByNumber(trainNumber);
+    if (!train) return false;
+    train.isActive = train.isActive === false ? true : false;
+    this.persist();
+    return train.isActive;
+  }
+
+  // --- ALTERNATIVE JOURNEY EXPLORER ---
   getAlternativeJourneys(sourceCode: string, destinationCode: string, travelDate: string, currentTrainNumber?: string) {
     const src = sourceCode.toUpperCase();
     const dest = destinationCode.toUpperCase();
 
-    // Direct alternative trains on same corridor
     const allDirect = this.searchTrains(src, dest);
     const directAlternatives = allDirect
       .filter((t) => t.trainNumber !== currentTrainNumber)
@@ -927,7 +1043,6 @@ class MemoryDatabase {
         };
       });
 
-    // Connecting journeys through hub stations (e.g. Katpadi KPD, Vijayawada BZA, Nagpur NGP)
     const hubCandidates = ['KPD', 'BZA', 'NGP', 'MAS', 'SBC'];
     const connectingAlternatives: any[] = [];
 

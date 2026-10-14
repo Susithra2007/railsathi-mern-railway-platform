@@ -13,13 +13,47 @@
 }
 
 @media print {
-  .no-print {
+  .no-print,
+  nav,
+  footer,
+  aside,
+  header {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
+
   body {
     background-color: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Unset fixed modal dark backdrops for clean paper printing */
+  .ticket-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    backdrop-filter: none !important;
+  }
+
+  .ticket-modal-box {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 12mm;
   }
 }

@@ -7,6 +7,8 @@ export interface Station {
   state: string;
   zone: string;
   platforms: number;
+  lat: number;
+  lng: number;
 }
 
 export interface IntermediateStop {
@@ -18,16 +20,37 @@ export interface IntermediateStop {
   distanceKm: number;
   dayCount: number;
   platform: number;
+  lat?: number;
+  lng?: number;
 }
 
 export interface ClassFareRule {
   classCode: SeatClassCode;
   className: string;
+  perKmRate: number; // e.g. 0.45 for SL, 1.10 for 3A, etc.
   baseMultiplier: number;
   reservationFee: number;
   superfastSurcharge: number;
   gstRate: number; // e.g. 0.05 for AC, 0 for Sleeper/2S
   totalSeatsCapacity: number;
+}
+
+export interface TrainLiveStatus {
+  trainNumber: string;
+  status: 'ON_TIME' | 'DELAYED' | 'DEPARTED' | 'ARRIVED';
+  delayMinutes: number;
+  currentStation: string;
+  previousStation: string;
+  nextStation: string;
+  currentPlatform: number;
+  journeyProgress: number; // 0 to 100 percentage
+  estimatedArrival: string;
+  estimatedDeparture: string;
+  dataSource: string; // e.g. "SIMULATED_ACADEMIC_DEMO"
+  lastUpdated: string;
+  notes?: string;
+  currentLat?: number;
+  currentLng?: number;
 }
 
 export interface Train {
@@ -48,18 +71,8 @@ export interface Train {
   classes: ClassFareRule[];
   pantryAvailable: boolean;
   cleanlinessRating: number;
+  isActive?: boolean;
   liveStatus?: TrainLiveStatus;
-}
-
-export interface TrainLiveStatus {
-  trainNumber: string;
-  status: 'ON_TIME' | 'DELAYED' | 'DEPARTED' | 'ARRIVED';
-  delayMinutes: number;
-  currentStation: string;
-  nextStation: string;
-  currentPlatform: number;
-  lastUpdated: string;
-  notes?: string;
 }
 
 export interface Passenger {
@@ -75,12 +88,18 @@ export interface Passenger {
 }
 
 export interface FareBreakdown {
-  baseFare: number;
+  distanceKm: number;
+  classCode: SeatClassCode;
+  className: string;
+  ratePerKm: number;
+  baseFare: number; // distanceKm * ratePerKm
   reservationCharge: number;
   superfastCharge: number;
+  configuredChargesTotal: number; // reservationCharge + superfastCharge
+  subtotal: number;
+  gstRate: number;
   gstAmount: number;
-  tatkalCharge?: number;
-  concessionAmount?: number;
+  discountAmount?: number;
   totalPerPassenger: number;
   passengerCount: number;
   grandTotal: number;
@@ -92,6 +111,7 @@ export interface Booking {
   userId: string;
   userEmail: string;
   userName: string;
+  userPhone?: string;
   trainNumber: string;
   trainName: string;
   trainType: string;
@@ -130,7 +150,7 @@ export interface JourneyNotification {
   trainNumber?: string;
   title: string;
   message: string;
-  type: 'BOOKING' | 'DELAY' | 'PLATFORM_CHANGE' | 'REMINDER' | 'SIMULATION';
+  type: 'REGISTRATION' | 'BOOKING' | 'DELAY' | 'PLATFORM_CHANGE' | 'REMINDER' | 'CANCELLATION' | 'SIMULATION';
   timestamp: string;
   read: boolean;
 }

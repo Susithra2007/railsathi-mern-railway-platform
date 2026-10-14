@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Booking } from '../types';
 import { api } from '../services/api';
-import { Search, Printer, AlertTriangle, CheckCircle2, XCircle, Clock, ShieldCheck, Loader2 } from 'lucide-react';
+import { Search, Printer, AlertTriangle, CheckCircle2, XCircle, Clock, ShieldCheck, Loader2, Download } from 'lucide-react';
+import { downloadTicketHtml } from '../utils/ticketGenerator';
 
 interface PNRStatusPageProps {
   initialPnr?: string;
@@ -102,7 +103,7 @@ export const PNRStatusPage: React.FC<PNRStatusPageProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span
                 className={`px-3 py-1 rounded-full text-xs font-bold font-mono ${
                   booking.status === 'CONFIRMED'
@@ -114,10 +115,18 @@ export const PNRStatusPage: React.FC<PNRStatusPageProps> = ({
               </span>
               <button
                 onClick={() => onViewETicket(booking)}
-                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition-colors border border-slate-200"
+                className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs flex items-center gap-1.5 transition-colors border border-slate-900 shadow-2xs"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Print E-Ticket</span>
+                <span>View / Print</span>
+              </button>
+              <button
+                onClick={() => downloadTicketHtml(booking)}
+                title="Download offline printable ticket file"
+                className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition-colors border border-slate-200"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-600" />
+                <span>Download File</span>
               </button>
             </div>
           </div>

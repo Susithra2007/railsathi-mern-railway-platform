@@ -16,34 +16,43 @@ export const searchTrains = (req: Request, res: Response) => {
     const { from, to, date, classCode } = req.query;
 
     if (!from || !to) {
-      // If no query parameters, return all trains
       const allTrains = db.getTrains();
       return res.json({ success: true, count: allTrains.length, data: allTrains });
     }
 
-    const trains = db.searchTrains(String(from), String(to));
+    const fromCode = String(from).trim().toUpperCase();
+    const toCode = String(to).trim().toUpperCase();
+
+    if (fromCode === toCode) {
+      return res.status(400).json({ success: false, message: 'Source and destination stations cannot be identical.' });
+    }
+
+    const trains = db.searchTrains(fromCode, toCode);
     const travelDate = String(date || new Date().toISOString().split('T')[0]);
 
-    // Enhance each train with real-time seat availability for each class
+    // Enhance each train with distance-based fare and real-time seat availability
     const enhancedTrains = trains.map((train) => {
+      const routeDistance = db.calculateRouteDistance(train, fromCode, toCode);
+
       const classAvailabilities = train.classes.map((cls) => {
         const avail = db.getSeatAvailability(train.trainNumber, cls.classCode, travelDate);
+        const fare = db.calculateFare(train, cls, 1, fromCode, toCode);
         return {
           classCode: cls.classCode,
           className: cls.className,
           status: avail?.status || 'AVAILABLE-24',
           availableSeats: avail?.availableSeats || 24,
-          fare: avail?.fare || db.calculateFare(train, cls, 1),
+          fare,
         };
       });
 
-      // Filter by requested class if specified
       const filteredByClass = classCode
         ? classAvailabilities.some((c) => c.classCode === classCode)
         : true;
 
       return {
         ...train,
+        distanceKm: routeDistance,
         classAvailabilities,
         matchesClass: filteredByClass,
       };
@@ -51,12 +60,12 @@ export const searchTrains = (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      query: { from, to, date: travelDate, classCode },
+      query: { from: fromCode, to: toCode, date: travelDate, classCode },
       count: enhancedTrains.length,
       data: enhancedTrains,
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(400).json({ success: false, message: error.message });
   }
 };
 
@@ -71,12 +80,13 @@ export const getTrainByNumber = (req: Request, res: Response) => {
     const date = String(req.query.date || new Date().toISOString().split('T')[0]);
     const classAvailabilities = train.classes.map((cls) => {
       const avail = db.getSeatAvailability(train.trainNumber, cls.classCode, date);
+      const fare = db.calculateFare(train, cls, 1);
       return {
         classCode: cls.classCode,
         className: cls.className,
         status: avail?.status || 'AVAILABLE-24',
         availableSeats: avail?.availableSeats || 24,
-        fare: avail?.fare || db.calculateFare(train, cls, 1),
+        fare,
       };
     });
 
@@ -94,7 +104,7 @@ export const getTrainByNumber = (req: Request, res: Response) => {
 
 export const checkAvailability = (req: Request, res: Response) => {
   try {
-    const { trainNumber, classCode, date } = req.query;
+    const { trainNumber, classCode, date, from, to } = req.query;
     if (!trainNumber || !classCode) {
       return res.status(400).json({ success: false, message: 'trainNumber and classCode are required.' });
     }
@@ -107,6 +117,46 @@ export const checkAvailability = (req: Request, res: Response) => {
     }
 
     return res.json({ success: true, data: avail });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getLiveTrainTracking = (req: Request, res: Response) => {
+  try {
+    const { trainNumber } = req.params;
+    const train = db.getTrainByNumber(trainNumber);
+    if (!train) {
+      return res.status(404).json({ success: false, message: `Train #${trainNumber} not found.` });
+    }
+
+    const liveStatus = db.getLiveTrainStatus(trainNumber);
+    return res.json({
+      success: true,
+      data: {
+        train,
+        liveStatus,
+        stops: train.stops,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const advanceSimulationStep = (req: Request, res: Response) => {
+  try {
+    const { trainNumber } = req.params;
+    const updated = db.advanceLiveSimulation(trainNumber);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: `Train #${trainNumber} not found.` });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Simulated position advanced on track',
+      data: updated,
+    });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
   }

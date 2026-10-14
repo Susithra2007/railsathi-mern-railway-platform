@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { Booking, SeatClassCode, Train } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { X, Plus, Trash2, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Plus, Trash2, ShieldCheck, AlertCircle, Loader2, LogIn, Calculator } from 'lucide-react';
 
 interface BookingModalProps {
   train: Train;
   classCode: SeatClassCode;
   travelDate: string;
+  fromCode?: string;
+  toCode?: string;
   onClose: () => void;
   onSuccess: (booking: Booking) => void;
+  onOpenAuthModal: () => void;
 }
 
 interface PassengerInput {
@@ -23,10 +26,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   train,
   classCode,
   travelDate,
+  fromCode,
+  toCode,
   onClose,
   onSuccess,
+  onOpenAuthModal,
 }) => {
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,12 +40,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const [passengers, setPassengers] = useState<PassengerInput[]>([
     {
-      name: user?.name || 'Priya Sharma',
-      age: 26,
-      gender: 'FEMALE',
+      name: user?.name || '',
+      age: 28,
+      gender: 'MALE',
       berthPreference: 'LOWER',
     },
   ]);
+
+  React.useEffect(() => {
+    if (user?.name && (!passengers[0].name || passengers[0].name === '')) {
+      const updated = [...passengers];
+      updated[0] = { ...updated[0], name: user.name };
+      setPassengers(updated);
+    }
+  }, [user]);
 
   const addPassenger = () => {
     if (passengers.length >= 4) return;
@@ -48,7 +62,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       {
         name: '',
         age: 30,
-        gender: 'MALE',
+        gender: 'FEMALE',
         berthPreference: 'NO_PREFERENCE',
       },
     ]);
@@ -65,30 +79,39 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setPassengers(updated);
   };
 
-  // Fare calculations
-  const baseRate = Math.round(train.distanceKm * 0.42 * classRule.baseMultiplier);
+  // Distance-Based Fare Estimation Formula:
+  // Base Fare = Route Distance (km) × Class Rate per km
+  // Subtotal = Base Fare + Configured Charges (Reservation Fee + Superfast Surcharge)
+  // Total Fare = (Subtotal + GST) × Passenger Count
+  const distanceKm = train.distanceKm || 359;
+  const ratePerKm = classRule.perKmRate || 0.48;
+  const baseRate = Math.round(distanceKm * ratePerKm);
   const reservationFee = classRule.reservationFee;
-  const superfastCharge = classRule.superfastSurcharge;
-  const subtotalPerPax = baseRate + reservationFee + superfastCharge;
-  const gstPerPax = Math.round(subtotalPerPax * classRule.gstRate);
+  const superfastCharge = train.trainType === 'SUPERFAST' || train.trainType === 'VANDE_BHARAT' || train.trainType === 'RAJDHANI'
+    ? classRule.superfastSurcharge
+    : 0;
+  const configuredCharges = reservationFee + superfastCharge;
+  const subtotalPerPax = baseRate + configuredCharges;
+  const gstPerPax = Math.round(subtotalPerPax * (classRule.gstRate || 0));
   const farePerPax = subtotalPerPax + gstPerPax;
   const grandTotal = farePerPax * passengers.length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      setError('Please sign in to confirm booking.');
+    if (!isLoggedIn || !user) {
+      setError('Please sign in or register to complete ticket reservation.');
       return;
     }
 
-    // Validation
-    for (const p of passengers) {
+    // Form validation
+    for (let i = 0; i < passengers.length; i++) {
+      const p = passengers[i];
       if (!p.name.trim()) {
-        setError('Passenger name is mandatory.');
+        setError(`Please enter passenger #${i + 1}'s full name.`);
         return;
       }
       if (p.age < 1 || p.age > 120) {
-        setError('Please enter a valid age (1-120).');
+        setError(`Please enter a valid age for passenger #${i + 1} (1-120).`);
         return;
       }
     }
@@ -102,6 +125,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           trainNumber: train.trainNumber,
           travelDate,
           classCode,
+          fromCode,
+          toCode,
           passengers,
         },
         user
@@ -115,14 +140,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8">
         {/* Header */}
         <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div>
             <h3 className="text-base font-bold">Passenger Reservation Slip</h3>
             <p className="text-xs text-slate-300 mt-0.5">
-              {train.trainName} ({train.trainNumber}) · {classRule.className} ({classCode})
+              {train.trainName} (#{train.trainNumber}) · {classRule.className} ({classCode})
             </p>
           </div>
           <button
@@ -139,23 +164,40 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             Route: <strong>{train.sourceName}</strong> ({train.sourceCode}) → <strong>{train.destinationName}</strong> ({train.destinationCode})
           </div>
           <div>
-            Date: <strong>{travelDate}</strong> · Dep: <strong>{train.departureTime}</strong>
+            Date: <strong>{travelDate}</strong> · Dep: <strong>{train.departureTime}</strong> ({distanceKm} km)
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {error && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+            <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Passenger Details */}
+          {!isLoggedIn && (
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-4">
+              <div>
+                <p className="font-bold">You are currently browsing as a Guest.</p>
+                <p className="text-amber-800 mt-0.5">Please sign in or register with your email to book tickets.</p>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenAuthModal}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In / Register</span>
+              </button>
+            </div>
+          )}
+
+          {/* Passenger Information */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Passenger Information (Max 4)
+                Passenger Details & Berth Preferences (Max 4)
               </h4>
               {passengers.length < 4 && (
                 <button
@@ -172,7 +214,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             {passengers.map((pax, index) => (
               <div key={index} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3 relative">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-700">
+                  <span className="text-xs font-bold text-slate-700">
                     Passenger #{index + 1}
                   </span>
                   {passengers.length > 1 && (
@@ -208,7 +250,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       min={1}
                       max={120}
                       onChange={(e) => updatePassenger(index, 'age', parseInt(e.target.value) || 1)}
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-1 focus:ring-amber-500"
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-1 focus:ring-amber-500 font-mono"
                       required
                     />
                   </div>
@@ -220,8 +262,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       onChange={(e) => updatePassenger(index, 'gender', e.target.value)}
                       className="w-full px-2 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-1 focus:ring-amber-500"
                     >
-                      <option value="FEMALE">Female</option>
                       <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
                       <option value="TRANSGENDER">Other</option>
                     </select>
                   </div>
@@ -234,12 +276,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       className="w-full px-2 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-900 focus:ring-1 focus:ring-amber-500"
                     >
                       <option value="NO_PREFERENCE">No Preference</option>
-                      <option value="LOWER">Lower Berth</option>
-                      <option value="MIDDLE">Middle Berth</option>
-                      <option value="UPPER">Upper Berth</option>
-                      <option value="SIDE_LOWER">Side Lower</option>
-                      <option value="SIDE_UPPER">Side Upper</option>
-                      <option value="WINDOW">Window Seat</option>
+                      <option value="LOWER">Lower Berth (LB)</option>
+                      <option value="MIDDLE">Middle Berth (MB)</option>
+                      <option value="UPPER">Upper Berth (UB)</option>
+                      <option value="SIDE_LOWER">Side Lower (SL)</option>
+                      <option value="SIDE_UPPER">Side Upper (SU)</option>
+                      <option value="WINDOW">Window Seat (WS)</option>
                     </select>
                   </div>
                 </div>
@@ -247,46 +289,54 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             ))}
           </div>
 
-          {/* Transparent Fare Calculation Breakdown */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
-            <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
-              Demonstration Fare Breakdown (Per Passenger)
-            </h4>
+          {/* Distance-Based Transparent Fare Calculator */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2.5 text-xs">
+            <div className="flex items-center justify-between font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+              <span className="flex items-center gap-1.5">
+                <Calculator className="w-3.5 h-3.5 text-amber-600" />
+                <span>Distance-Based Fare Breakdown (Per Passenger)</span>
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {distanceKm} km @ ₹{ratePerKm}/km
+              </span>
+            </div>
+
             <div className="space-y-1.5 text-slate-600">
               <div className="flex justify-between">
-                <span>Base Distance Fare ({train.distanceKm} km × {classRule.baseMultiplier}):</span>
+                <span>Base Distance Fare ({distanceKm} km × ₹{ratePerKm}/km):</span>
                 <span className="font-mono text-slate-900">₹{baseRate}</span>
               </div>
               <div className="flex justify-between">
-                <span>Reservation Charge:</span>
+                <span>Reservation Fee:</span>
                 <span className="font-mono text-slate-900">₹{reservationFee}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Superfast Surcharge:</span>
-                <span className="font-mono text-slate-900">₹{superfastCharge}</span>
-              </div>
+              {superfastCharge > 0 && (
+                <div className="flex justify-between">
+                  <span>Superfast Surcharge:</span>
+                  <span className="font-mono text-slate-900">₹{superfastCharge}</span>
+                </div>
+              )}
               {gstPerPax > 0 && (
                 <div className="flex justify-between">
-                  <span>Goods & Services Tax (5% AC GST):</span>
+                  <span>GST (5% AC Service Tax):</span>
                   <span className="font-mono text-slate-900">₹{gstPerPax}</span>
                 </div>
               )}
               <div className="pt-2 border-t border-slate-200 flex justify-between font-bold text-sm text-slate-900">
-                <span>Total Fare ({passengers.length} Passenger{passengers.length > 1 ? 's' : ''}):</span>
+                <span>Total Amount ({passengers.length} Passenger{passengers.length > 1 ? 's' : ''}):</span>
                 <span className="font-mono text-amber-900 text-base">₹{grandTotal}</span>
               </div>
             </div>
           </div>
 
-          {/* Guidelines note */}
           <div className="text-[11px] text-slate-500 flex items-start gap-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
             <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <span>
-              By confirming, tickets will be reserved atomically with verified coach and berth assignments. Original ID proof is required during journey.
+              Seats are reserved atomically and tied to your authenticated passenger account. Original government photo ID is required during travel.
             </span>
           </div>
 
-          {/* Footer Action Buttons */}
+          {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -307,7 +357,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   <span>Reserving Seats...</span>
                 </>
               ) : (
-                <span>Confirm & Pay ₹{grandTotal}</span>
+                <span>Confirm &amp; Pay ₹{grandTotal}</span>
               )}
             </button>
           </div>

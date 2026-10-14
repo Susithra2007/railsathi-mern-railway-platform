@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Booking } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Printer, XCircle, AlertTriangle, CheckCircle2, Calendar, Clock, Ticket } from 'lucide-react';
+import { Printer, XCircle, AlertTriangle, CheckCircle2, Calendar, Clock, Ticket, Download } from 'lucide-react';
+import { downloadTicketHtml } from '../utils/ticketGenerator';
 
 interface MyBookingsPageProps {
   bookings: Booking[];
@@ -93,13 +94,21 @@ export const MyBookingsPage: React.FC<MyBookingsPageProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => onViewETicket(b)}
                     className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     <span>View / Print ERS</span>
+                  </button>
+                  <button
+                    onClick={() => downloadTicketHtml(b)}
+                    title="Download offline printable ticket file"
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 transition-colors border border-slate-200"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Download File</span>
                   </button>
                   {b.status === 'CONFIRMED' && (
                     <button

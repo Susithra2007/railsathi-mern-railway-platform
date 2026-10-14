@@ -6,27 +6,14 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, pass: string) => Promise<void>;
-  register: (name: string, email: string, pass: string, phone: string) => Promise<void>;
+  register: (name: string, email: string, pass: string, phone: string, confirmPassword?: string) => Promise<void>;
+  loginDemo: (role: 'PASSENGER' | 'ADMIN') => Promise<void>;
+  forgotPassword: (email: string, newPassword?: string) => Promise<string>;
+  updateProfile: (name: string, phone: string) => Promise<void>;
   logout: () => void;
-  switchRole: (role: 'PASSENGER' | 'ADMIN') => void;
   isAdmin: boolean;
+  isLoggedIn: boolean;
 }
-
-const DEFAULT_PASSENGER: User = {
-  id: 'usr_passenger_1',
-  name: 'Priya Sharma',
-  email: 'passenger@rail.in',
-  phone: '+91 98765 43210',
-  role: 'PASSENGER',
-};
-
-const DEFAULT_ADMIN: User = {
-  id: 'usr_admin_1',
-  name: 'Rajesh Kumar (Station Super)',
-  email: 'admin@rail.in',
-  phone: '+91 98111 22334',
-  role: 'ADMIN',
-};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -37,14 +24,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         return JSON.parse(saved);
       } catch {
-        return DEFAULT_PASSENGER;
+        return null;
       }
     }
-    return DEFAULT_PASSENGER;
+    // Clean initial guest state: Users can browse, register, or sign in freely
+    return null;
   });
 
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('railsathi_token') || 'demo_token';
+    return localStorage.getItem('railsathi_token');
   });
 
   useEffect(() => {
@@ -62,11 +50,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('railsathi_token', result.token);
   };
 
-  const register = async (name: string, email: string, pass: string, phone: string) => {
-    const result = await api.register(name, email, pass, phone);
+  const register = async (name: string, email: string, pass: string, phone: string, confirmPassword?: string) => {
+    const result = await api.register(name, email, pass, phone, confirmPassword);
     setUser(result.user);
     setToken(result.token);
     localStorage.setItem('railsathi_token', result.token);
+  };
+
+  const loginDemo = async (role: 'PASSENGER' | 'ADMIN') => {
+    if (role === 'ADMIN') {
+      await login('admin@rail.in', 'admin123');
+    } else {
+      await login('passenger@rail.in', 'pass123');
+    }
+  };
+
+  const forgotPassword = async (email: string, newPassword?: string): Promise<string> => {
+    const res = await api.forgotPassword(email, newPassword);
+    return res.message;
+  };
+
+  const updateProfile = async (name: string, phone: string) => {
+    if (!user) throw new Error('Not logged in');
+    const res = await api.updateProfile(name, phone, user);
+    setUser(res.user);
   };
 
   const logout = () => {
@@ -76,14 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('railsathi_token');
   };
 
-  const switchRole = (role: 'PASSENGER' | 'ADMIN') => {
-    if (role === 'ADMIN') {
-      setUser(DEFAULT_ADMIN);
-    } else {
-      setUser(DEFAULT_PASSENGER);
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -91,9 +90,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         login,
         register,
+        loginDemo,
+        forgotPassword,
+        updateProfile,
         logout,
-        switchRole,
         isAdmin: user?.role === 'ADMIN',
+        isLoggedIn: !!user,
       }}
     >
       {children}

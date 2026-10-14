@@ -4,28 +4,49 @@ import { SeatClassCode } from '../types';
 
 export const createBooking = (req: Request, res: Response) => {
   try {
-    const { userId, userEmail, userName, trainNumber, travelDate, classCode, passengers } = req.body;
+    const {
+      userId,
+      userEmail,
+      userName,
+      userPhone,
+      trainNumber,
+      travelDate,
+      classCode,
+      fromCode,
+      toCode,
+      passengers,
+    } = req.body;
 
     if (!trainNumber || !travelDate || !classCode || !passengers || !Array.isArray(passengers) || passengers.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required booking fields (trainNumber, travelDate, classCode, passengers array).',
+        message: 'Missing required booking fields (trainNumber, travelDate, classCode, passengers list).',
+      });
+    }
+
+    if (!userId || !userEmail) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please sign in to book railway tickets.',
       });
     }
 
     const booking = db.createBooking({
-      userId: userId || 'usr_passenger_1',
-      userEmail: userEmail || 'passenger@rail.in',
+      userId,
+      userEmail,
       userName: userName || 'Passenger',
+      userPhone: userPhone || '',
       trainNumber: String(trainNumber),
       travelDate: String(travelDate),
       classCode: classCode as SeatClassCode,
+      fromCode,
+      toCode,
       passengers,
     });
 
     return res.status(201).json({
       success: true,
-      message: 'Ticket booked successfully. Unique PNR generated.',
+      message: `Reservation confirmed! Unique PNR: ${booking.pnr}`,
       data: booking,
     });
   } catch (error: any) {
@@ -39,7 +60,7 @@ export const getBookingByPnr = (req: Request, res: Response) => {
     const booking = db.getBookingByPnr(pnr);
 
     if (!booking) {
-      return res.status(404).json({ success: false, message: `PNR #${pnr} not found in database.` });
+      return res.status(404).json({ success: false, message: `No booking record found for PNR #${pnr}.` });
     }
 
     const train = db.getTrainByNumber(booking.trainNumber);
@@ -59,7 +80,12 @@ export const getBookingByPnr = (req: Request, res: Response) => {
 
 export const getUserBookings = (req: Request, res: Response) => {
   try {
-    const userId = (req.headers['x-user-id'] as string) || (req.query.userId as string) || 'usr_passenger_1';
+    const userId = (req.headers['x-user-id'] as string) || (req.query.userId as string);
+    if (!userId) {
+      return res.json({ success: true, count: 0, data: [] });
+    }
+
+    // Security: Only return bookings belonging to this passenger
     const bookings = db.getUserBookings(userId);
 
     return res.json({
@@ -75,8 +101,12 @@ export const getUserBookings = (req: Request, res: Response) => {
 export const cancelBooking = (req: Request, res: Response) => {
   try {
     const { pnr } = req.params;
-    const userId = (req.headers['x-user-id'] as string) || (req.body.userId as string) || 'usr_passenger_1';
+    const userId = (req.headers['x-user-id'] as string) || (req.body.userId as string);
     const userRole = (req.headers['x-user-role'] as string) || 'PASSENGER';
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
 
     const result = db.cancelBooking(pnr, userId, userRole === 'ADMIN');
 
