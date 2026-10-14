@@ -1,0 +1,6 @@
+{
+  "name": "RailSathi - Railway Passenger Digital Platform",
+  "description": "A MERN-based Railway Passenger Digital Platform with Smart Journey Assistance, seat availability, PNR management, alternative journey explorer, and real-time status updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
