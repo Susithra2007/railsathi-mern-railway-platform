@@ -38,12 +38,24 @@ export const api = {
     email: string,
     password: string,
     phone: string,
-    confirmPassword?: string
+    confirmPassword?: string,
+    role?: 'PASSENGER' | 'ADMIN',
+    designation?: string,
+    adminPasscode?: string
   ): Promise<{ user: User; token: string }> {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, confirmPassword, phone }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        confirmPassword,
+        phone,
+        role,
+        designation,
+        adminPasscode,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Registration failed');

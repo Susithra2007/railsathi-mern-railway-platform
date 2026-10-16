@@ -22,7 +22,7 @@ interface AdminPageProps {
   stations: Station[];
   onRefreshData: () => void;
   onViewETicket: (booking: Booking) => void;
-  onOpenAuthModal: () => void;
+  onOpenAuthModal: (mode?: 'LOGIN' | 'REGISTER', role?: 'PASSENGER' | 'ADMIN') => void;
 }
 
 export const AdminPage: React.FC<AdminPageProps> = ({
@@ -224,19 +224,27 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           </div>
         )}
 
-        <div className="flex justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           <button
             onClick={handleQuickAdminLogin}
-            className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-2 shadow-sm"
+            className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold text-xs rounded-lg transition-colors inline-flex items-center gap-2 shadow-sm"
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Sign In as Admin (Rajesh Kumar)</span>
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <span>1-Click Login (Rajesh Kumar)</span>
           </button>
           <button
-            onClick={onOpenAuthModal}
-            className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg transition-colors"
+            onClick={() => onOpenAuthModal('LOGIN', 'ADMIN')}
+            className="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1.5"
           >
-            Custom Sign In
+            <ShieldCheck className="w-3.5 h-3.5 text-slate-600" />
+            <span>Admin Sign In</span>
+          </button>
+          <button
+            onClick={() => onOpenAuthModal('REGISTER', 'ADMIN')}
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-xs inline-flex items-center gap-1.5"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-slate-950" />
+            <span>Register New Admin Account</span>
           </button>
         </div>
       </div>

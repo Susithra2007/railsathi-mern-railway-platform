@@ -4,7 +4,7 @@
       "id": "usr_passenger_1",
       "name": "Priya Sharma",
       "email": "passenger@rail.in",
-      "passwordHash": "pass123",
+      "passwordHash": "$2b$10$hL/7Nu2kQG8s1wi1uZb.MuSljAkCkz8rNIzmomcJO.sxN21l7NI52",
       "phone": "+91 98765 43210",
       "role": "PASSENGER",
       "createdAt": "2026-01-10T10:00:00.000Z"
@@ -13,7 +13,7 @@
       "id": "usr_admin_1",
       "name": "Rajesh Kumar (Station Super)",
       "email": "admin@rail.in",
-      "passwordHash": "admin123",
+      "passwordHash": "$2b$10$LwDTtq.AVZeyo6f9PZHAIewASd2Gj1DqrNGN/QKv16cU/0gqrO/eS",
       "phone": "+91 98111 22334",
       "role": "ADMIN",
       "createdAt": "2026-01-01T08:00:00.000Z"
@@ -35,6 +35,24 @@
       "phone": "+91 98450 11223",
       "role": "PASSENGER",
       "createdAt": "2026-10-14T04:19:27.187Z"
+    },
+    {
+      "id": "usr_1792111866678_953",
+      "name": "susi",
+      "email": "susithra2007s@gmail.com",
+      "passwordHash": "$2b$10$UJ.22J8OZYHx2mFuBy1OLe5V8Y9rB7FvX1AfI5dBYNSBhtxe6vBJ.",
+      "phone": "9442921710",
+      "role": "PASSENGER",
+      "createdAt": "2026-10-16T00:51:06.678Z"
+    },
+    {
+      "id": "usr_1792112504450_741",
+      "name": "Suresh Raina (Station Superintendent)",
+      "email": "suresh.admin@rail.in",
+      "passwordHash": "$2b$10$F1iARfOJU9xaJ7Yd5l6hbepkPtw7u4oPMtSgEwsmiHgw9CL/j4p/q",
+      "phone": "+91 99887 76655",
+      "role": "ADMIN",
+      "createdAt": "2026-10-16T01:01:44.450Z"
     }
   ],
   "stations": [
@@ -867,6 +885,58 @@
   ],
   "bookings": [
     {
+      "id": "bk_1792111882938",
+      "pnr": "958-257-3354",
+      "userId": "usr_1792111866678_953",
+      "userEmail": "susithra2007s@gmail.com",
+      "userName": "susi",
+      "userPhone": "9442921710",
+      "trainNumber": "20607",
+      "trainName": "Vande Bharat Express",
+      "trainType": "VANDE_BHARAT",
+      "travelDate": "2026-10-17",
+      "sourceCode": "MAS",
+      "sourceName": "M.G.R. Chennai Central",
+      "destinationCode": "SBC",
+      "destinationName": "KSR Bengaluru City Junction",
+      "departureTime": "05:50",
+      "arrivalTime": "10:20",
+      "classCode": "CC",
+      "className": "AC Chair Car",
+      "departurePlatform": 2,
+      "passengers": [
+        {
+          "id": "pax_1792111882938_0",
+          "name": "susi",
+          "age": 28,
+          "gender": "MALE",
+          "berthPreference": "LOWER",
+          "coach": "C2",
+          "berthNumber": 33,
+          "berthType": "Lower (LB)",
+          "status": "CONFIRMED"
+        }
+      ],
+      "fareBreakdown": {
+        "distanceKm": 359,
+        "classCode": "CC",
+        "className": "AC Chair Car",
+        "ratePerKm": 0.45,
+        "baseFare": 162,
+        "reservationCharge": 40,
+        "superfastCharge": 45,
+        "configuredChargesTotal": 85,
+        "subtotal": 247,
+        "gstRate": 0.05,
+        "gstAmount": 12,
+        "totalPerPassenger": 259,
+        "passengerCount": 1,
+        "grandTotal": 259
+      },
+      "status": "CONFIRMED",
+      "bookedAt": "2026-10-16T00:51:22.938Z"
+    },
+    {
       "id": "bk_1791951580493",
       "pnr": "998-310-5283",
       "userId": "usr_1791951567187_504",
@@ -978,6 +1048,43 @@
     }
   ],
   "notifications": [
+    {
+      "id": "notif_1792112504450",
+      "userId": "usr_1792112504450_741",
+      "title": "Railway Admin Access Granted",
+      "message": "Welcome Suresh Raina (Station Superintendent)! Your Railway Official Administrator account is active. You have full access to Train Management, Live Tracking Simulator, Fare Rules, and PNR Control.",
+      "type": "REGISTRATION",
+      "timestamp": "2026-10-16T01:01:44.450Z",
+      "read": false
+    },
+    {
+      "id": "notif_1792112356215",
+      "userId": "usr_admin_1",
+      "title": "Password Updated",
+      "message": "Your account password has been reset successfully.",
+      "type": "REGISTRATION",
+      "timestamp": "2026-10-16T00:59:16.215Z",
+      "read": false
+    },
+    {
+      "id": "notif_1792111882938",
+      "userId": "usr_1792111866678_953",
+      "trainNumber": "20607",
+      "title": "Booking Confirmed: PNR 958-257-3354",
+      "message": "Your booking for Vande Bharat Express on 2026-10-17 is confirmed in Coach C2.",
+      "type": "BOOKING",
+      "timestamp": "2026-10-16T00:51:22.938Z",
+      "read": false
+    },
+    {
+      "id": "notif_1792111866678",
+      "userId": "usr_1792111866678_953",
+      "title": "Welcome to RailSathi!",
+      "message": "Namaste susi! Your passenger account has been registered. Search trains and book your journeys easily.",
+      "type": "REGISTRATION",
+      "timestamp": "2026-10-16T00:51:06.678Z",
+      "read": false
+    },
     {
       "id": "notif_1791951587683",
       "userId": "usr_1791951567187_504",

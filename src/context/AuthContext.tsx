@@ -6,7 +6,16 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, pass: string) => Promise<void>;
-  register: (name: string, email: string, pass: string, phone: string, confirmPassword?: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    pass: string,
+    phone: string,
+    confirmPassword?: string,
+    role?: 'PASSENGER' | 'ADMIN',
+    designation?: string,
+    adminPasscode?: string
+  ) => Promise<void>;
   loginDemo: (role: 'PASSENGER' | 'ADMIN') => Promise<void>;
   forgotPassword: (email: string, newPassword?: string) => Promise<string>;
   updateProfile: (name: string, phone: string) => Promise<void>;
@@ -50,8 +59,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('railsathi_token', result.token);
   };
 
-  const register = async (name: string, email: string, pass: string, phone: string, confirmPassword?: string) => {
-    const result = await api.register(name, email, pass, phone, confirmPassword);
+  const register = async (
+    name: string,
+    email: string,
+    pass: string,
+    phone: string,
+    confirmPassword?: string,
+    role?: 'PASSENGER' | 'ADMIN',
+    designation?: string,
+    adminPasscode?: string
+  ) => {
+    const result = await api.register(name, email, pass, phone, confirmPassword, role, designation, adminPasscode);
     setUser(result.user);
     setToken(result.token);
     localStorage.setItem('railsathi_token', result.token);

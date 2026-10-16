@@ -24,7 +24,7 @@ interface NavbarProps {
   unreadCount: number;
   onOpenNotifications: () => void;
   onOpenAiAssistant: () => void;
-  onOpenAuthModal: (mode?: 'LOGIN' | 'REGISTER') => void;
+  onOpenAuthModal: (mode?: 'LOGIN' | 'REGISTER', role?: 'PASSENGER' | 'ADMIN') => void;
   onOpenWorkflowGuide?: () => void;
 }
 
@@ -306,32 +306,47 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                       <button
                         onClick={async () => {
-                          await loginDemo('ADMIN');
-                          setShowDemoMenu(false);
+                          try {
+                            await loginDemo('ADMIN');
+                            setCurrentTab('admin');
+                            setShowDemoMenu(false);
+                          } catch (err) {
+                            console.error('Demo Admin login error:', err);
+                          }
                         }}
                         className="w-full text-left p-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors block"
                       >
                         <div className="font-bold text-slate-900 flex items-center justify-between">
                           <span>Admin (Rajesh Kumar)</span>
-                          <span className="text-[10px] font-mono text-slate-600">ADMIN</span>
+                          <span className="text-[10px] font-mono text-slate-600 bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded">ADMIN</span>
                         </div>
                         <div className="text-[10px] text-slate-700 font-mono mt-0.5">
                           admin@rail.in / admin123
                         </div>
                         <div className="text-[10px] text-slate-500 mt-1">
-                          Full fleet controls, live delays, and all bookings
+                          Fleet control, simulation, train delays &amp; fare rules
                         </div>
                       </button>
 
-                      <div className="pt-1 text-center">
+                      <div className="pt-2 border-t border-slate-100 space-y-1">
                         <button
                           onClick={() => {
                             setShowDemoMenu(false);
-                            onOpenAuthModal('REGISTER');
+                            onOpenAuthModal('REGISTER', 'PASSENGER');
                           }}
-                          className="text-[11px] font-semibold text-amber-700 hover:text-amber-800"
+                          className="w-full text-left py-1 text-[11px] font-medium text-blue-700 hover:text-blue-900 flex items-center gap-1"
                         >
-                          + Or register your own custom email
+                          <span>+ Register New Passenger Account</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowDemoMenu(false);
+                            onOpenAuthModal('REGISTER', 'ADMIN');
+                          }}
+                          className="w-full text-left py-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 flex items-center gap-1"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                          <span>+ Register New Railway Admin Account</span>
                         </button>
                       </div>
                     </div>

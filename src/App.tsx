@@ -65,6 +65,7 @@ function AppContent() {
   // Modals
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'LOGIN' | 'REGISTER' | 'FORGOT'>('LOGIN');
+  const [authModalRole, setAuthModalRole] = useState<'PASSENGER' | 'ADMIN'>('PASSENGER');
   const [selectedTrainForSchedule, setSelectedTrainForSchedule] = useState<Train | null>(null);
   const [bookingModalParams, setBookingModalParams] = useState<{
     train: Train;
@@ -210,8 +211,9 @@ function AppContent() {
         unreadCount={unreadCount}
         onOpenNotifications={() => setShowNotificationDrawer(true)}
         onOpenAiAssistant={() => setShowAiModal(true)}
-        onOpenAuthModal={(mode) => {
+        onOpenAuthModal={(mode, role) => {
           setAuthModalMode(mode || 'LOGIN');
+          setAuthModalRole(role || 'PASSENGER');
           setShowAuthModal(true);
         }}
         onOpenWorkflowGuide={() => setShowWorkflowGuide(true)}
@@ -226,6 +228,7 @@ function AppContent() {
             onCheckPnr={handleCheckPnr}
             onOpenAuthModal={(mode) => {
               setAuthModalMode(mode || 'REGISTER');
+              setAuthModalRole('PASSENGER');
               setShowAuthModal(true);
             }}
             onOpenWorkflowGuide={() => setShowWorkflowGuide(true)}
@@ -311,8 +314,9 @@ function AppContent() {
             stations={stations}
             onRefreshData={loadInitialData}
             onViewETicket={(b) => setETicketBooking(b)}
-            onOpenAuthModal={() => {
-              setAuthModalMode('LOGIN');
+            onOpenAuthModal={(mode, role) => {
+              setAuthModalMode(mode || 'LOGIN');
+              setAuthModalRole(role || 'ADMIN');
               setShowAuthModal(true);
             }}
           />
@@ -326,6 +330,12 @@ function AppContent() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         initialMode={authModalMode}
+        initialRole={authModalRole}
+        onLoginSuccess={(role) => {
+          if (role === 'ADMIN') {
+            setCurrentTab('admin');
+          }
+        }}
       />
 
       {/* System Architecture & Lifecycle Workflow Guide */}

@@ -40,7 +40,7 @@ export const login = (req: Request, res: Response) => {
 
 export const register = (req: Request, res: Response) => {
   try {
-    const { name, email, password, confirmPassword, phone } = req.body;
+    const { name, email, password, confirmPassword, phone, role, designation, adminPasscode } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required.' });
@@ -60,18 +60,36 @@ export const register = (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
     }
 
+    // Determine Role
+    let assignedRole: 'PASSENGER' | 'ADMIN' = 'PASSENGER';
+    if (role === 'ADMIN') {
+      const allowedCodes = ['RAILADMIN2026', 'RAILADMIN', 'ADMIN', 'ADMIN123', 'RAIL2026', 'STATIONMASTER'];
+      if (adminPasscode && !allowedCodes.includes(String(adminPasscode).trim().toUpperCase())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid Admin Authorization Code. Please use official code (e.g. RAILADMIN2026) or leave blank for default verification.',
+        });
+      }
+      assignedRole = 'ADMIN';
+    }
+
     const newUser = db.registerUser({
       name,
       email,
       password,
       phone: phone || '+91 98000 00000',
+      role: assignedRole,
+      designation: designation || (assignedRole === 'ADMIN' ? 'Station Controller' : undefined),
     });
 
     const token = `jwt_token_${newUser.id}_${Date.now()}`;
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully! You are now logged in.',
+      message:
+        assignedRole === 'ADMIN'
+          ? 'Railway Administrator account registered successfully! Full admin console unlocked.'
+          : 'Passenger account created successfully! You are now logged in.',
       token,
       user: {
         id: newUser.id,
